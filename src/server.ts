@@ -83,6 +83,7 @@ export async function createServer(
 			code: ctx.request.query.code,
 			client_id: config.slackClientId,
 			client_secret: config.slackClientSecret,
+			redirect_uri: `${config.slackRedirectHost}callback`,
 		};
 		console.log('oauth callback form', JSON.stringify(form, null, 2));
 
