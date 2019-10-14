@@ -78,7 +78,7 @@ export async function createServer(
 		ctx.response.body = response;
 	});
 
-	router.get('/oauth/callback', async ctx => {
+	router.get('/callback', async ctx => {
 		const form = {
 			code: ctx.request.query.code,
 			client_id: config.slackClientId,
@@ -97,7 +97,7 @@ export async function createServer(
 
 	router.get('/oauth', async ctx => {
 		ctx.redirect(
-			`https://slack.com/oauth/authorize?client_id=${config.slackClientId}&scope=commands&redirect_uri=${config.slackRedirectHost}oauth/callback`,
+			`https://slack.com/oauth/authorize?client_id=${config.slackClientId}&scope=commands&redirect_uri=${config.slackRedirectHost}callback`,
 		);
 	});
 
