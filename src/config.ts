@@ -1,6 +1,8 @@
 export interface Config {
 	slackSigningSecret: string;
 	slackClientId: string;
+	slackClientSecret: string;
+	slackRedirectHost: string;
 }
 
 export function getConfigFromEnv(): Config {
@@ -16,5 +18,22 @@ export function getConfigFromEnv(): Config {
 		throw new Error('No SLACK_CLIENT_ID');
 	}
 
-	return { slackSigningSecret, slackClientId };
+	const slackClientSecret = process.env.SLACK_CLIENT_SECRET;
+
+	if (!slackClientSecret) {
+		throw new Error('No SLACK_CLIENT_SECRET');
+	}
+
+	const slackRedirectHost = process.env.SLACK_REDIRECT_HOST;
+
+	if (!slackRedirectHost) {
+		throw new Error('No SLACK_REDIRECT_HOST');
+	}
+
+	return {
+		slackSigningSecret,
+		slackClientId,
+		slackClientSecret,
+		slackRedirectHost,
+	};
 }

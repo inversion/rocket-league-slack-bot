@@ -4,6 +4,7 @@ import Router from '@koa/router';
 import { CommandHandler } from './commands';
 import { Config } from './config';
 import { createHmac, timingSafeEqual } from 'crypto';
+import request from 'request';
 
 /**
  * See https://api.slack.com/docs/verifying-requests-from-slack
@@ -79,8 +80,25 @@ export async function createServer(
 
 	router.get('/oauth', async ctx => {
 		ctx.redirect(
-			`https://slack.com/oauth/authorize?client_id=${config.slackClientId}&scope=commands`,
+			`https://slack.com/oauth/authorize?client_id=${config.slackClientId}&scope=commands&redirect_uri=${config.slackRedirectHost}oauth/callback`,
 		);
+	});
+
+	router.get('/oauth/callback', async ctx => {
+		const form = {
+			code: ctx.request.query.code,
+			client_id: config.slackClientId,
+			client_secret: config.slackClientSecret,
+		};
+		console.log('oauth callback form', JSON.stringify(form, null, 2));
+
+		const result = await request.post({
+			url: 'https://slack.com/api/oauth.access',
+			form,
+		});
+
+		console.log('oauth callback result', result);
+		ctx.response.status = 200;
 	});
 
 	// TODO: Interactive features
