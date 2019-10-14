@@ -1,5 +1,6 @@
 export interface Config {
 	slackSigningSecret: string;
+	slackClientId: string;
 }
 
 export function getConfigFromEnv(): Config {
@@ -9,5 +10,11 @@ export function getConfigFromEnv(): Config {
 		throw new Error('No SLACK_SIGNING_SECRET');
 	}
 
-	return { slackSigningSecret };
+	const slackClientId = process.env.SLACK_CLIENT_ID;
+
+	if (!slackClientId) {
+		throw new Error('No SLACK_CLIENT_ID');
+	}
+
+	return { slackSigningSecret, slackClientId };
 }

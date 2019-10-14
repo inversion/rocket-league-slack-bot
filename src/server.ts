@@ -77,6 +77,12 @@ export async function createServer(
 		ctx.response.body = response;
 	});
 
+	router.get('/oauth', async ctx => {
+		ctx.redirect(
+			`https://slack.com/oauth/authorize?client_id=${config.slackClientId}&scope=commands`,
+		);
+	});
+
 	// TODO: Interactive features
 	// router.post('/interactive', ctx => {
 	// 	verifySlackRequest(config, ctx);
