@@ -1,4 +1,7 @@
 node_modules
-*.js
+src/**/*.js
 coverage
 *.tsbuildinfo
+yarn-error.log
+data.db
+*.sqlite3
