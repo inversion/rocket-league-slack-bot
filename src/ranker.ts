@@ -51,6 +51,12 @@ export function calculatePlayerRanks(
 		);
 		const K = kFactor(minPlayed);
 
+		console.error(`Game summary:
+${date.toISOString()}
+${blue.team.join(' ')} ${blue.goals} - ${orange.goals} ${orange.team.join(' ')}
+
+		`);
+
 		updateTeamScores(
 			date,
 			blue,
@@ -145,9 +151,14 @@ function updateTeamScores(
 	const ourNewScore = ourScore + K * (S - E) * movm;
 	const scoreRatio = (ourNewScore / ourScore) * decayFactor;
 
+	console.error(`won=${weWon} movm=${movm} E=${E} decayFactor=${decayFactor} ourScore=${ourScore} ourNewScore=${ourNewScore} scoreRatio=${scoreRatio}`);
+
 	// Update each player's score by multiplying it by the ratio of the new and old scores
 	teamPlayers.forEach(player => {
-		player.setScore(player.getScore() * scoreRatio);
+		const playerOldScore= player.getScore();
+		const playerNewScore = playerOldScore * scoreRatio;
+		console.error(`${player.name} oldScore=${playerOldScore} newScore=${playerNewScore} delta=${playerNewScore - playerOldScore}`);
+		player.setScore(playerNewScore);
 		player.incrementPlayed();
 
 		if (weWon) {

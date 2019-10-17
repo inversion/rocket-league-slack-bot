@@ -5,7 +5,7 @@ export interface Side {
 
 export class Fixture {
 	constructor(
-		public readonly date: Date,
+		public date: Date,
 		public readonly blue: Side,
 		public readonly orange: Side,
 	) {
