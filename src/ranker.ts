@@ -1,6 +1,9 @@
 import { Fixture, Side } from './Fixture';
 import { Player } from './Player';
 import { defaults } from 'lodash';
+import { DEBUG_NAME } from './debugName';
+
+const debug = require('debug')(DEBUG_NAME);
 
 type Players = Record<string, Player>;
 interface Options {
@@ -51,6 +54,12 @@ export function calculatePlayerRanks(
 		);
 		const K = kFactor(minPlayed);
 
+		debug(`Game summary:
+${date.toISOString()}
+${blue.team.join(' ')} ${blue.goals} - ${orange.goals} ${orange.team.join(' ')}
+
+		`);
+
 		updateTeamScores(
 			date,
 			blue,
@@ -71,17 +80,44 @@ export function calculatePlayerRanks(
 			orangePlayers,
 			rankingOptions,
 		);
+
+		if (debug.enabled) {
+			debug(getSummary(Object.values(players)));
+		}
 	}
 
-	return Object.values(players).sort((a, b) => b.getScore() - a.getScore());
+	return Object.values(players);
+}
+
+export function getSummary(table: Player[]) {
+	const headings = ['Name', 'Score', 'Played', 'Won', 'Lost'];
+
+	const pad = (str: string) => str.padEnd(15, ' ');
+
+	return [
+		headings.map(pad).join(''),
+		...table
+			.sort((a, b) => b.getScore() - a.getScore())
+			.map(player =>
+				[
+					player.name,
+					`${Math.round(player.score)}`,
+					`${player.getPlayed()}`,
+					`${player.getWins()}`,
+					`${player.getLosses()}`,
+				]
+					.map(pad)
+					.join(''),
+			),
+	].join('\n');
 }
 
 /**
  * Fixtures have less of an impact on score the further in the past they are.
  *
- * After a year, fixtures will have no impact.
+ * After a quarter of a year, fixtures will have no impact.
  */
-const DAILY_DECAY = 1 / 365;
+const DAILY_DECAY = 1 / (365 / 4);
 const DAY_MS = 24 * 3600 * 1000;
 
 /**
@@ -106,9 +142,13 @@ export function marginOfVictoryMultiplier(
 	const QFactor = 2.2;
 	const Q = QFactor / ((winningScore - losingScore) * 0.005 + QFactor);
 
-	const movm = Math.log(goalDifference + 2) * Q;
+	const movm = Math.log(goalDifference + 1) * Q;
 
 	return movm;
+}
+
+function clamp(min: number, max: number) {
+	return (num: number) => Math.min(Math.max(min, num), max);
 }
 
 function updateTeamScores(
@@ -126,28 +166,47 @@ function updateTeamScores(
 	const E = expectedScore(ourScore, theirScore);
 
 	const movm = rankingOptions.useMovm
-		? marginOfVictoryMultiplier(
-				weWon ? ourScore : theirScore,
-				weWon ? theirScore : ourScore,
-				Math.abs(ourSide.goals - theirSide.goals),
+		? Math.max(
+				marginOfVictoryMultiplier(
+					weWon ? ourScore : theirScore,
+					weWon ? theirScore : ourScore,
+					Math.abs(ourSide.goals - theirSide.goals),
+				),
+				1,
 		  )
 		: 1;
 
 	const decayFactor = rankingOptions.useDecay
-		? 1 -
-		  Math.max(
-				0,
+		? clamp(0, 1)(
 				((rankingOptions.currentDate.getTime() - date.getTime()) / DAY_MS) *
 					DAILY_DECAY,
 		  )
-		: 1;
+		: 0;
 
 	const ourNewScore = ourScore + K * (S - E) * movm;
-	const scoreRatio = (ourNewScore / ourScore) * decayFactor;
+	const baseScoreRatio = ourNewScore / ourScore;
+
+	// Apply the decay to the difference from 1 in the ratio rather than to the overall ratio
+	const scoreRatio =
+		baseScoreRatio > 1
+			? 1 + (baseScoreRatio - 1) * (1 - decayFactor)
+			: 1 - (1 - baseScoreRatio) * (1 - decayFactor);
+
+	debug(
+		`won=${weWon} movm=${movm} E=${E} decayFactor=${decayFactor} ourScore=${ourScore} ourNewScore=${ourNewScore} baseScoreRatio=${baseScoreRatio} scoreRatio=${scoreRatio}`,
+	);
 
 	// Update each player's score by multiplying it by the ratio of the new and old scores
 	teamPlayers.forEach(player => {
-		player.setScore(player.getScore() * scoreRatio);
+		const playerOldScore = player.getScore();
+		const playerNewScore = playerOldScore * scoreRatio;
+		debug(
+			`${
+				player.name
+			} oldScore=${playerOldScore} newScore=${playerNewScore} delta=${playerNewScore -
+				playerOldScore}`,
+		);
+		player.setScore(playerNewScore);
 		player.incrementPlayed();
 
 		if (weWon) {

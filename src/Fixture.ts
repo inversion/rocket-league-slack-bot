@@ -5,7 +5,7 @@ export interface Side {
 
 export class Fixture {
 	constructor(
-		public readonly date: Date,
+		public date: Date,
 		public readonly blue: Side,
 		public readonly orange: Side,
 	) {
@@ -27,7 +27,7 @@ export class Fixture {
 	}
 }
 
-const playerNames = (str: string) => str.split(' ');
+const playerNames = (str: string) => str.split(/\s+/).filter(s => s.length);
 const goals = (str: string) => parseInt(str, 10);
 
 export function parseFixturesFromString(str: string) {
@@ -36,7 +36,9 @@ export function parseFixturesFromString(str: string) {
 		.map(line => line.trim().toLowerCase())
 		.filter(line => line.length)
 		.map(line => {
-			const match = line.match(/^((?:[@a-z] ?)+) (\d+) (\d+) ((?:[@a-z] ?)+)$/);
+			const match = line.match(
+				/^((?:[@a-z]+\s*)+)\s+(\d+)\s+(\d+)\s+((?:[@a-z]\s*)+)$/,
+			);
 
 			if (!match) {
 				throw new Error('No match');
