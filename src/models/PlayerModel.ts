@@ -7,4 +7,5 @@ export class PlayerModel extends BaseModel {
 
 	id!: number;
 	name!: string;
+	hidden!: boolean;
 }

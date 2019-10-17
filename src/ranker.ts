@@ -5,7 +5,7 @@ import { DEBUG_NAME } from './debugName';
 
 const debug = require('debug')(DEBUG_NAME);
 
-type Players = Record<string, Player>;
+export type Players = Record<string, Player>;
 interface Options {
 	useMovm: boolean;
 	useDecay: boolean;
@@ -24,6 +24,7 @@ interface Options {
  */
 export function calculatePlayerRanks(
 	fixtures: Fixture[],
+	players: Players = {},
 	rankingOptionsInput?: Partial<Options>,
 ) {
 	const rankingOptions = defaults(rankingOptionsInput || {}, {
@@ -31,8 +32,6 @@ export function calculatePlayerRanks(
 		useDecay: true,
 		currentDate: new Date(),
 	});
-
-	const players: Players = {};
 
 	for (const fixture of fixtures) {
 		const { blue, orange, date } = fixture;
@@ -98,8 +97,11 @@ export function getSummary(table: Player[]) {
 		headings.map(pad).join(''),
 		...table
 			.sort((a, b) => b.getScore() - a.getScore())
-			.map(player =>
-				[
+			.map(player => {
+				if (player.hidden) {
+					return;
+				}
+				return [
 					player.name,
 					`${Math.round(player.score)}`,
 					`${player.getPlayed()}`,
@@ -107,8 +109,9 @@ export function getSummary(table: Player[]) {
 					`${player.getLosses()}`,
 				]
 					.map(pad)
-					.join(''),
-			),
+					.join('');
+			})
+			.filter(line => !!line),
 	].join('\n');
 }
 

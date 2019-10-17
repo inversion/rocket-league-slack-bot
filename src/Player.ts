@@ -15,7 +15,7 @@ export class Player {
 	 */
 	public score = INITIAL_SCORE;
 
-	constructor(public readonly name: string) {}
+	constructor(public readonly name: string, public readonly hidden = false) {}
 
 	toString() {
 		return `Player[${this.name}]`;

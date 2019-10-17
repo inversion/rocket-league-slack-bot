@@ -6,6 +6,7 @@ import { FixtureModel, FixturePlayerModel } from './models/FixtureModel';
 import { PlayerModel } from './models/PlayerModel';
 import { FixturesToPlayersModel } from './models/FixturesToPlayersModel';
 import { TEAM_ID } from './data/TeamId';
+import { Player } from './Player';
 
 export class Database {
 	private readonly knex: Knex;
@@ -92,6 +93,12 @@ export class Database {
 		return players
 			.filter(player => player.team === team)
 			.map(player => player.name);
+	}
+
+	public async getPlayers(): Promise<Player[]> {
+		const playerModels = await PlayerModel.query(this.knex);
+
+		return playerModels.map(({ name, hidden }) => new Player(name, hidden));
 	}
 
 	public async getFixtures(): Promise<Fixture[]> {

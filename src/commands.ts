@@ -1,6 +1,6 @@
 import { Database } from './database';
 import { parseFixturesFromString } from './Fixture';
-import { calculatePlayerRanks, getSummary } from './ranker';
+import { calculatePlayerRanks, getSummary, Players } from './ranker';
 
 export class CommandHandler {
 	constructor(private readonly database: Database) {}
@@ -36,8 +36,16 @@ export class CommandHandler {
 
 	public async table() {
 		const fixtures = await this.database.getFixtures();
+		const players = await this.database.getPlayers();
 
-		const table = calculatePlayerRanks(fixtures);
+		const table = calculatePlayerRanks(
+			fixtures,
+			players.reduce<Players>((acc, player) => {
+				acc[player.name] = player;
+
+				return acc;
+			}, {}),
+		);
 
 		const summary = getSummary(table);
 
