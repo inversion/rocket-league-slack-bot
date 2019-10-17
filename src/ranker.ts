@@ -89,7 +89,7 @@ ${blue.team.join(' ')} ${blue.goals} - ${orange.goals} ${orange.team.join(' ')}
 }
 
 export function getSummary(table: Player[]) {
-	const headings = ['Name', 'Score', 'Played', 'Won', 'Lost'];
+	const headings = ['Name', 'Score', 'Played', 'Won', 'Lost', 'Win Ratio'];
 
 	const pad = (str: string) => str.padEnd(15, ' ');
 
@@ -101,12 +101,16 @@ export function getSummary(table: Player[]) {
 				if (player.hidden) {
 					return;
 				}
+				const played = player.getPlayed();
+				const wins = player.getWins();
+				const losses = player.getLosses();
 				return [
 					player.name,
 					`${Math.round(player.score)}`,
-					`${player.getPlayed()}`,
-					`${player.getWins()}`,
-					`${player.getLosses()}`,
+					`${played}`,
+					`${wins}`,
+					`${losses}`,
+					`${played === 0 ? 0 : (wins / played).toFixed(2)}`,
 				]
 					.map(pad)
 					.join('');
