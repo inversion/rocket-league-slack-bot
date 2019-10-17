@@ -6,12 +6,20 @@ import { CommandHandler } from './commands';
 if (require.main === module) {
 	(async () => {
 		try {
-			const config = getConfigFromEnv();
-
 			const database = new Database();
 			await database.setup();
 
 			const commandHandler = new CommandHandler(database);
+
+			if (process.argv[2] === '--viewDb') {
+				console.log(await commandHandler.table());
+
+				await database.teardown();
+
+				process.exit();
+			}
+
+			const config = getConfigFromEnv();
 
 			const server = await createServer(config, commandHandler);
 

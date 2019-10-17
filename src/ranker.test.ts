@@ -2,7 +2,7 @@ import { calculatePlayerRanks, marginOfVictoryMultiplier } from './ranker';
 import { Fixture, parseFixturesFromString } from './Fixture';
 import { Player } from './Player';
 import { Database } from './database';
-import {addDays } from 'date-fns';
+import { addDays } from 'date-fns';
 
 function summariseTable(players: Player[]) {
 	console.table(
@@ -23,13 +23,7 @@ Andrew Ross 3 2 Mike Hugh`;
 
 		const fixtures = parseFixturesFromString(input);
 
-		// fixtures[0].date = addDays(new Date(), -28);
-
-		// console.log('Without MoVM');
-
-		// summariseTable(calculatePlayerRanks(fixtures, { useMovm: false }));
-
-		console.log('With MoVM');
+		fixtures[0].date = addDays(new Date(), -28);
 
 		summariseTable(calculatePlayerRanks(fixtures));
 	});
