@@ -1,9 +1,35 @@
 import { Database } from './database';
 import { parseFixturesFromString } from './Fixture';
-import { calculatePlayerRanks, getSummary, Players } from './ranker';
+import {
+	calculatePlayerRanks,
+	getSummary,
+	Players,
+	INITIAL_SCORE,
+	formatRank,
+} from './ranker';
 import request from 'request-promise-native';
 import { format } from 'date-fns';
 import { Config } from './config';
+import { Player } from './Player';
+import { flatten, uniq, compact } from 'lodash';
+
+function keyByPlayerName(players: Player[]): Players {
+	return players.reduce<Players>((acc, player) => {
+		acc[player.name] = player;
+
+		return acc;
+	}, {});
+}
+
+function formatChange(change: number) {
+	if (change === 0) {
+		return '';
+	} else if (change > 0) {
+		return `(+${change})`;
+	} else {
+		return `(${change})`;
+	}
+}
 
 export class CommandHandler {
 	constructor(
@@ -41,8 +67,25 @@ export class CommandHandler {
 		}
 		const fixtures = parseFixturesFromString(body.text);
 
+		const oldTable = await this.getTable();
+
 		const fixtureModels = await Promise.all(
 			fixtures.map(fixture => this.database.saveFixture(fixture)),
+		);
+
+		const newTable = await this.getTable();
+
+		const playerModels = await this.database.getPlayerModels();
+
+		const involvedPlayers = compact(
+			uniq(
+				flatten(
+					fixtures.map(fixture => [
+						...fixture.blue.team,
+						...fixture.orange.team,
+					]),
+				),
+			).map(name => playerModels.find(model => model.name === name)),
 		);
 
 		const date = new Date();
@@ -81,24 +124,60 @@ export class CommandHandler {
 				{
 					type: 'divider',
 				},
+				...involvedPlayers.map(playerModel => {
+					const oldRank = oldTable.findIndex(
+						player => player.name === playerModel.name,
+					);
+					const oldRecord = oldRank !== -1 ? oldTable[oldRank] : undefined;
+
+					const newRank = newTable.findIndex(
+						player => player.name === playerModel.name,
+					);
+					const newRecord = newTable[newRank];
+
+					const scoreChange = Math.round(
+						newRecord.getScore() -
+							(oldRecord ? oldRecord.getScore() : INITIAL_SCORE),
+					);
+
+					const rankChange = oldRank ? oldRank - newRank : 0;
+
+					const rankChangeEmoji =
+						rankChange === 0
+							? ''
+							: rankChange > 0
+							? ':arrow_up:'
+							: ':arrow_down:';
+
+					return {
+						type: 'section',
+						text: {
+							type: 'mrkdwn',
+							text: `${
+								scoreChange > 0
+									? playerModel.getWinEmoji()
+									: playerModel.getLoseEmoji()
+							} ${playerModel.name} - Score: ${Math.round(
+								newRecord.getScore(),
+							)} ${formatChange(scoreChange)}. Rank: ${formatRank(
+								newRank + 1,
+							)} ${formatChange(rankChange)} ${rankChangeEmoji}`,
+						},
+					};
+				}),
 			],
 		};
 	}
 
-	public async table() {
+	private async getTable() {
 		const fixtures = await this.database.getFixtures();
 		const players = await this.database.getPlayers();
 
-		const table = calculatePlayerRanks(
-			fixtures,
-			players.reduce<Players>((acc, player) => {
-				acc[player.name] = player;
+		return calculatePlayerRanks(fixtures, keyByPlayerName(players));
+	}
 
-				return acc;
-			}, {}),
-		);
-
-		const summary = getSummary(table);
+	public async table() {
+		const summary = getSummary(await this.getTable());
 
 		return {
 			response_type: 'in_channel',

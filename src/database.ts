@@ -107,8 +107,12 @@ export class Database {
 		});
 	}
 
+	public async getPlayerModels(): Promise<PlayerModel[]> {
+		return PlayerModel.query(this.knex);
+	}
+
 	public async getPlayers(): Promise<Player[]> {
-		const playerModels = await PlayerModel.query(this.knex);
+		const playerModels = await this.getPlayerModels();
 
 		return playerModels.map(({ name, hidden }) => new Player(name, hidden));
 	}
