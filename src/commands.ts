@@ -3,9 +3,13 @@ import { parseFixturesFromString } from './Fixture';
 import { calculatePlayerRanks, getSummary, Players } from './ranker';
 import request from 'request-promise-native';
 import { format } from 'date-fns';
+import { Config } from './config';
 
 export class CommandHandler {
-	constructor(private readonly database: Database) {}
+	constructor(
+		private readonly database: Database,
+		private readonly config: Config,
+	) {}
 
 	async handleCommand(body: any) {
 		const command = body.command;
@@ -23,6 +27,18 @@ export class CommandHandler {
 	}
 
 	public async record(body: any) {
+		const homeChannel = this.config.slackHomeChannel;
+		if (homeChannel && body.channel_name !== homeChannel) {
+			await request.post({
+				url: body.response_url,
+				json: true,
+				body: {
+					response_type: 'ephemeral',
+					text: `Sorry, you can only record games in the #${homeChannel} channel.`,
+				},
+			});
+			return;
+		}
 		const fixtures = parseFixturesFromString(body.text);
 
 		const fixtureModels = await Promise.all(
