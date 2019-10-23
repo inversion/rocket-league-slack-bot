@@ -95,13 +95,22 @@ export async function createServer(
 		ctx.response.status = 200;
 	});
 
-	// TODO: Interactive features
-	// router.post('/interactive', ctx => {
-	// 	verifySlackRequest(config, ctx);
+	router.post('/interactive', async ctx => {
+		try {
+			verifySlackRequest(config, ctx);
+		} catch (err) {
+			console.error(err);
+			ctx.response.body = 'Could not verify request is from Slack';
+			ctx.response.status = 400;
+			return;
+		}
 
-	// 	// ctx.router available
-	// 	console.log(ctx.body);
-	// });
+		await commandHandler.handleInteraction(
+			JSON.parse(ctx.request.body.payload),
+		);
+
+		ctx.response.status = 200;
+	});
 
 	app.use(router.routes()).use(router.allowedMethods());
 
