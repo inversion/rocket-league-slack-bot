@@ -3,6 +3,7 @@ export interface Config {
 	slackClientId: string;
 	slackClientSecret: string;
 	slackRedirectHost: string;
+	slackHomeChannel?: string;
 }
 
 export function getConfigFromEnv(): Config {
@@ -30,10 +31,13 @@ export function getConfigFromEnv(): Config {
 		throw new Error('No SLACK_REDIRECT_HOST');
 	}
 
+	const slackHomeChannel = process.env.SLACK_HOME_CHANNEL;
+
 	return {
 		slackSigningSecret,
 		slackClientId,
 		slackClientSecret,
 		slackRedirectHost,
+		slackHomeChannel,
 	};
 }

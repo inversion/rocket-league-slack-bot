@@ -85,26 +85,47 @@ ${blue.team.join(' ')} ${blue.goals} - ${orange.goals} ${orange.team.join(' ')}
 		}
 	}
 
-	return Object.values(players);
+	return Object.values(players)
+		.sort((a, b) => b.getScore() - a.getScore())
+		.filter(player => !player.hidden);
+}
+
+export function formatRank(rank: number) {
+	let suffix = 'th';
+
+	if (rank === 1) {
+		suffix = 'st';
+	} else if (rank === 2) {
+		suffix = 'nd';
+	} else if (rank === 3) {
+		suffix = 'rd';
+	}
+
+	return `${rank}${suffix}`;
 }
 
 export function getSummary(table: Player[]) {
-	const headings = ['Name', 'Score', 'Played', 'Won', 'Lost', 'Win Ratio'];
+	const headings = [
+		'Rank',
+		'Name',
+		'Score',
+		'Played',
+		'Won',
+		'Lost',
+		'Win Ratio',
+	];
 
-	const pad = (str: string) => str.padEnd(15, ' ');
+	const pad = (str: string) => str.padEnd(10, ' ');
 
 	return [
 		headings.map(pad).join(''),
 		...table
-			.sort((a, b) => b.getScore() - a.getScore())
-			.map(player => {
-				if (player.hidden) {
-					return;
-				}
+			.map((player, i) => {
 				const played = player.getPlayed();
 				const wins = player.getWins();
 				const losses = player.getLosses();
 				return [
+					formatRank(i + 1),
 					player.name,
 					`${Math.round(player.score)}`,
 					`${played}`,

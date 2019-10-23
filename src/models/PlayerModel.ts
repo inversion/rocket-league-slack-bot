@@ -8,4 +8,14 @@ export class PlayerModel extends BaseModel {
 	id!: number;
 	name!: string;
 	hidden!: boolean;
+	win_emoji?: string;
+	lose_emoji?: string;
+
+	getLoseEmoji() {
+		return `:${this.lose_emoji || 'confounded'}:`;
+	}
+
+	getWinEmoji() {
+		return `:${this.win_emoji || 'grinning'}:`;
+	}
 }

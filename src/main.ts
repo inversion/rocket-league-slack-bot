@@ -9,7 +9,9 @@ if (require.main === module) {
 			const database = new Database();
 			await database.setup();
 
-			const commandHandler = new CommandHandler(database);
+			const config = getConfigFromEnv();
+
+			const commandHandler = new CommandHandler(database, config);
 
 			if (process.argv[2] === '--viewDb') {
 				console.log(await commandHandler.table());
@@ -18,8 +20,6 @@ if (require.main === module) {
 
 				process.exit();
 			}
-
-			const config = getConfigFromEnv();
 
 			const server = await createServer(config, commandHandler);
 

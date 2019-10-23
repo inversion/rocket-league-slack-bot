@@ -21,9 +21,9 @@ export class Fixture {
 	}
 
 	toString() {
-		return `${this.blue.team.join(' ')} ${this.blue.goals} - ${
+		return `${this.blue.team.join(' ')} *${this.blue.goals}* - *${
 			this.orange.goals
-		} ${this.orange.team.join(' ')}`;
+		}* ${this.orange.team.join(' ')}`;
 	}
 }
 

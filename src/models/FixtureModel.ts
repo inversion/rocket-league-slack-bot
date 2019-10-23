@@ -3,9 +3,16 @@ import { Model } from 'objection';
 import { PlayerModel } from './PlayerModel';
 import { FixturesToPlayersModel } from './FixturesToPlayersModel';
 import { TEAM_ID } from '../data/TeamId';
+import { Fixture } from '../Fixture';
 
 export interface FixturePlayerModel extends PlayerModel {
 	team: TEAM_ID;
+}
+
+function playersOfTeam(players: FixturePlayerModel[], team: TEAM_ID): string[] {
+	return players
+		.filter(player => player.team === team)
+		.map(player => player.name);
 }
 
 export class FixtureModel extends BaseModel {
@@ -35,4 +42,21 @@ export class FixtureModel extends BaseModel {
 			},
 		},
 	};
+
+	toFixture(): Fixture {
+		const { date, blue_goals, orange_goals, players } = this;
+		const fixture = new Fixture(
+			date,
+			{
+				goals: blue_goals,
+				team: players ? playersOfTeam(players, TEAM_ID.BLUE) : [],
+			},
+			{
+				goals: orange_goals,
+				team: players ? playersOfTeam(players, TEAM_ID.ORANGE) : [],
+			},
+		);
+
+		return fixture;
+	}
 }

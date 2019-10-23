@@ -50,8 +50,9 @@ export class Database {
 	}
 
 	public async saveFixture(fixture: Fixture) {
+		let insertedFixture!: FixtureModel;
 		await this.knex.transaction(async trx => {
-			const insertedFixture = await FixtureModel.query(trx).insertAndFetch({
+			insertedFixture = await FixtureModel.query(trx).insertAndFetch({
 				date: fixture.date,
 				blue_goals: fixture.blue.goals,
 				orange_goals: fixture.orange.goals,
@@ -84,40 +85,49 @@ export class Database {
 
 			await trx.commit();
 		});
+
+		if (!insertedFixture) {
+			throw new Error('Fixture was not inserted');
+		}
+
+		return insertedFixture;
 	}
 
-	private playersOfTeam(
-		players: FixturePlayerModel[],
-		team: TEAM_ID,
-	): string[] {
-		return players
-			.filter(player => player.team === team)
-			.map(player => player.name);
+	async deleteFixture(fixtureId: number) {
+		// Unfortunately I did not add an ON DELETE CASCADE to this table and sqlite doesn't support ALTER TABLE to ADD CONSTRAINT
+		// so just manually delete the player records
+		await this.knex.transaction(async trx => {
+			await FixturesToPlayersModel.query(trx)
+				.where({
+					fixture_id: fixtureId,
+				})
+				.delete();
+			await FixtureModel.query(trx).deleteById(fixtureId);
+			await trx.commit();
+		});
+	}
+
+	public async getPlayerModels(): Promise<PlayerModel[]> {
+		return PlayerModel.query(this.knex);
 	}
 
 	public async getPlayers(): Promise<Player[]> {
-		const playerModels = await PlayerModel.query(this.knex);
+		const playerModels = await this.getPlayerModels();
 
 		return playerModels.map(({ name, hidden }) => new Player(name, hidden));
+	}
+
+	public async getFixtureById(id: number): Promise<FixtureModel | undefined> {
+		return FixtureModel.query(this.knex)
+			.eager('players')
+			.findOne({
+				id,
+			});
 	}
 
 	public async getFixtures(): Promise<Fixture[]> {
 		const fixtureModels = await FixtureModel.query(this.knex).eager('players');
 
-		return fixtureModels.map(({ date, blue_goals, orange_goals, players }) => {
-			const fixture = new Fixture(
-				date,
-				{
-					goals: blue_goals,
-					team: players ? this.playersOfTeam(players, TEAM_ID.BLUE) : [],
-				},
-				{
-					goals: orange_goals,
-					team: players ? this.playersOfTeam(players, TEAM_ID.ORANGE) : [],
-				},
-			);
-
-			return fixture;
-		});
+		return fixtureModels.map(model => model.toFixture());
 	}
 }
