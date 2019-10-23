@@ -125,8 +125,14 @@ export class Database {
 			});
 	}
 
-	public async getFixtures(): Promise<Fixture[]> {
-		const fixtureModels = await FixtureModel.query(this.knex).eager('players');
+	public async getFixtures(maxDate?: Date): Promise<Fixture[]> {
+		let query = FixtureModel.query(this.knex).eager('players');
+
+		if (maxDate) {
+			query = query.where('date', '<=', maxDate);
+		}
+
+		const fixtureModels = await query;
 
 		return fixtureModels.map(model => model.toFixture());
 	}
