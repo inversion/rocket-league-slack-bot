@@ -12,7 +12,7 @@ Record the outcome of a game, which is saved to the database.
 
 ![rocket-record example](docs/img/rocket-record.png)
 
-The changes to players' Elo scores and ranks are shown.
+The changes to players' Elo scores and ranks are shown. If a game is deleted, a message is posted to the channel saying so, including who deleted it.
 
 ### Show the league table
 
@@ -32,7 +32,7 @@ Show score and rank changes in the last 24 hours.
 
 ## Hidden Features
 
-Some other features can only be activated at present by editing the SQLite database.
+Some other features can only be activated at present by editing the SQLite database or setting environment variables.
 
 ### Hiding players
 
@@ -49,6 +49,12 @@ Custom win and lose emoji can be set by setting the `win_emoji` and `lose_emoji`
 ```sql
 UPDATE players SET win_emoji = 'champagne', lose_emoji = 'neutral_face' WHERE name = 'bob';
 ```
+
+### Limit recording games to one channel
+
+Set the `SLACK_HOME_CHANNEL` environment variable.
+
+E.g. If you set `SLACK_HOME_CHANNEL=general` then try to record a game in the #random channel: `Sorry, you can only record games in the #general channel.`
 
 ## Notes on Elo scoring
 
