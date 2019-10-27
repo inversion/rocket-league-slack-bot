@@ -88,3 +88,11 @@ The following articles were referred to when building the project.
 
 - https://blog.mackie.io/the-elo-algorithm
 - https://ryanmadden.net/posts/Adapting-Elo
+
+## How to build it
+
+Coming soon
+
+## How to use it
+
+Coming soon
