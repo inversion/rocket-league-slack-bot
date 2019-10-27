@@ -3,7 +3,7 @@
 	"author": {
 		"name": "Andrew Moss"
 	},
-	"description": "Track Rocket League games and player ranks",
+	"description": "Track Rocket League scores and view Elo rankings within Slack",
 	"version": "0.1.0",
 	"license": "MIT",
 	"main": "src/main.js",
