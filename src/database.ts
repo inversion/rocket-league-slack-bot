@@ -128,6 +128,8 @@ export class Database {
 	public async getFixtures(maxDate?: Date): Promise<Fixture[]> {
 		const fixtureModels = await FixtureModel.query(this.knex).eager('players');
 
-        return fixtureModels.map(model => model.toFixture()).filter(fixture => !maxDate || fixture.date <= maxDate);
+		return fixtureModels
+			.map(model => model.toFixture())
+			.filter(fixture => !maxDate || fixture.date <= maxDate);
 	}
 }
