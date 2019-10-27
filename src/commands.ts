@@ -256,7 +256,10 @@ ${biggestUpsets.map(({ fixture }) => formatFixtureWithDate(fixture)).join('\n')}
 ${this.matches(players, fixtures)}
 `;
 
-		return stats;
+		return {
+			response_type: 'in_channel',
+			text: stats,
+		};
 	}
 
 	public async changes(body: any) {
