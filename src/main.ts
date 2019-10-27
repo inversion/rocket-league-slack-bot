@@ -15,6 +15,7 @@ if (require.main === module) {
 
 			// For testing purposes
 			if (process.argv[2] === '--viewDb') {
+				console.log(await commandHandler.history());
 				console.log(await commandHandler.stats());
 
 				await database.teardown();

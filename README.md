@@ -30,6 +30,22 @@ Show score and rank changes in the last 24 hours.
 
 ![rocket-changes example](docs/img/rocket-changes.png)
 
+### Show history
+
+Shows all games in the database ordered by time.
+
+`/rocket-history`
+
+![rocket-history example](docs/img/rocket-history.png)
+
+### Show stats
+
+Shows some stats on the biggest victories and upsets, and who people tend to team up with (and not team up with).
+
+`/rocket-stats`
+
+![rocket-stats example](docs/img/rocket-stats.png)
+
 ## Hidden Features
 
 Some other features can only be activated at present by editing the SQLite database or setting environment variables.

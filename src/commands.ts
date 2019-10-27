@@ -15,6 +15,9 @@ import { Player } from './Player';
 import { flatten, uniq, compact } from 'lodash';
 import { PlayerModel } from './models/PlayerModel';
 
+const formatFixtureWithDate = (fixture: Fixture) =>
+	`${format(fixture.date, 'do MMM yyyy')} ${fixture.toString()}`;
+
 function keyByPlayerName(players: Player[]): Players {
 	return players.reduce<Players>((acc, player) => {
 		acc[player.name] = player;
@@ -53,6 +56,8 @@ export class CommandHandler {
 			return this.changes(body);
 		} else if (command === `${commandPrefix}stats`) {
 			return this.stats();
+		} else if (command === `${commandPrefix}history`) {
+			return this.history();
 		} else {
 			throw new Error(`Unknown command ${command}`);
 		}
@@ -139,17 +144,90 @@ export class CommandHandler {
 		};
 	}
 
+	matches(players: Player[], fixtures: Fixture[]) {
+		const activePlayers = players.filter(player => !player.hidden);
+
+		type Matches = Record<
+			string,
+			{
+				matches: Record<string, number>;
+				player: Player;
+			}
+		>;
+
+		const matchesForPlayers = activePlayers.reduce<Matches>(
+			(acc, player) =>
+				Object.assign(acc, {
+					[player.name]: {
+						player,
+						matches: activePlayers.reduce((acc, otherPlayer) => {
+							if (player.name !== otherPlayer.name) {
+								Object.assign(acc, { [otherPlayer.name]: 0 });
+							}
+							return acc;
+						}, {}),
+					},
+				}),
+			{},
+		);
+
+		for (const fixture of fixtures) {
+			for (const { team } of [fixture.blue, fixture.orange]) {
+				for (let i = 0; i < team.length; i++) {
+					const name = team[i];
+					const otherNames = team.slice();
+					otherNames.splice(i, 1);
+
+					for (const otherName of otherNames) {
+						if (
+							!matchesForPlayers[name] ||
+							matchesForPlayers[name].matches[otherName] === undefined
+						) {
+							continue;
+						}
+						matchesForPlayers[name].matches[otherName]++;
+					}
+				}
+			}
+		}
+
+		const formatMatch = ([name, times]: [string, number]) =>
+			`${name} (${times} times)`;
+
+		return Object.values(matchesForPlayers)
+			.sort((a, b) => a.player.name.localeCompare(b.player.name))
+			.map(({ player, matches }) => {
+				const sortedMatches = Object.entries(matches).sort(
+					(a, b) => a[1] - b[1],
+				);
+
+				const most = sortedMatches[sortedMatches.length - 1];
+				const least = sortedMatches[0];
+
+				return `${player.name} has played most with ${formatMatch(
+					most,
+				)} and least with ${formatMatch(least)}`;
+			})
+			.join('\n');
+	}
+
+	async history() {
+		const { fixtures } = await this.getTable();
+
+		return fixtures
+			.sort((a, b) => a.date.getTime() - b.date.getTime())
+			.map(formatFixtureWithDate)
+			.join('\n');
+	}
+
 	async stats() {
-		const { results, fixtures } = await this.getTable(undefined, {
+		const { results, players, fixtures } = await this.getTable(undefined, {
 			useDecay: false,
 		});
 
 		if (!fixtures.length) {
 			return 'No stats yet - record some games!';
 		}
-
-		const formatFixtureWithDate = (fixture: Fixture) =>
-			`${format(fixture.date, 'do MMM yyyy')} ${fixture.toString()}`;
 
 		const NUM_TO_SHOW = 5;
 
@@ -174,7 +252,9 @@ ${biggestVictories
 
 Biggest Upsets:
 ${biggestUpsets.map(({ fixture }) => formatFixtureWithDate(fixture)).join('\n')}
-		`;
+		
+${this.matches(players, fixtures)}
+`;
 
 		return stats;
 	}
@@ -210,6 +290,7 @@ ${biggestUpsets.map(({ fixture }) => formatFixtureWithDate(fixture)).join('\n')}
 		const players = await this.database.getPlayers();
 
 		return {
+			players,
 			fixtures,
 			...calculatePlayerRanks(
 				fixtures,

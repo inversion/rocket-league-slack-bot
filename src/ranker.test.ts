@@ -25,7 +25,7 @@ Andrew Ross 3 2 Mike Hugh`;
 
 		fixtures[0].date = addDays(new Date(), -28);
 
-		summariseTable(calculatePlayerRanks(fixtures, {}));
+		summariseTable(calculatePlayerRanks(fixtures, {}).table);
 	});
 });
 
