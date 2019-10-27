@@ -25,6 +25,10 @@ export class Fixture {
 			this.orange.goals
 		}* ${this.orange.team.join(' ')}`;
 	}
+
+	goalDifference() {
+		return Math.abs(this.blue.goals - this.orange.goals);
+	}
 }
 
 const playerNames = (str: string) => str.split(/\s+/).filter(s => s.length);

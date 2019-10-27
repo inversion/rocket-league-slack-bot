@@ -1,11 +1,12 @@
 import { Database } from './database';
-import { parseFixturesFromString } from './Fixture';
+import { parseFixturesFromString, Fixture } from './Fixture';
 import {
 	calculatePlayerRanks,
 	getSummary,
 	Players,
 	INITIAL_SCORE,
 	formatRank,
+	RankerOptions,
 } from './ranker';
 import request from 'request-promise-native';
 import { format, addDays } from 'date-fns';
@@ -50,6 +51,8 @@ export class CommandHandler {
 			return this.table();
 		} else if (command === `${commandPrefix}changes`) {
 			return this.changes(body);
+		} else if (command === `${commandPrefix}stats`) {
+			return this.stats();
 		} else {
 			throw new Error(`Unknown command ${command}`);
 		}
@@ -102,7 +105,7 @@ export class CommandHandler {
 						type: 'mrkdwn',
 						text: `${body.user_name} saved ${fixtures.length} new fixture${
 							fixtures.length === 1 ? '' : 's'
-						} on ${format(date, 'Mo MMM')} at ${format(date, 'HH:mm')}`,
+						} on ${format(date, 'do MMM')} at ${format(date, 'HH:mm')}`,
 					},
 				},
 				{
@@ -127,9 +130,53 @@ export class CommandHandler {
 				{
 					type: 'divider',
 				},
-				...(await this.getTableDiff(oldTable, newTable, involvedPlayers)),
+				...(await this.getTableDiff(
+					oldTable.table,
+					newTable.table,
+					involvedPlayers,
+				)),
 			],
 		};
+	}
+
+	async stats() {
+		const { results, fixtures } = await this.getTable(undefined, {
+			useDecay: false,
+		});
+
+		if (!fixtures.length) {
+			return 'No stats yet - record some games!';
+		}
+
+		const formatFixtureWithDate = (fixture: Fixture) =>
+			`${format(fixture.date, 'do MMM yyyy')} ${fixture.toString()}`;
+
+		const NUM_TO_SHOW = 5;
+
+		const biggestVictories = fixtures
+			.slice()
+			.sort((a, b) => b.goalDifference() - a.goalDifference())
+			.slice(0, NUM_TO_SHOW);
+
+		const biggestUpsets = results
+			.slice()
+			.sort((a, b) => b.scoreRatio - a.scoreRatio)
+			.slice(0, NUM_TO_SHOW);
+
+		const stats = `
+Biggest Victories:
+${biggestVictories
+	.map(
+		fixture =>
+			`${formatFixtureWithDate(fixture)} (+${fixture.goalDifference()} GD)`,
+	)
+	.join('\n')}
+
+Biggest Upsets:
+${biggestUpsets.map(({ fixture }) => formatFixtureWithDate(fixture)).join('\n')}
+		`;
+
+		return stats;
 	}
 
 	public async changes(body: any) {
@@ -150,16 +197,26 @@ export class CommandHandler {
 				{
 					type: 'divider',
 				},
-				...(await this.getTableDiff(oldTable, newTable)),
+				...(await this.getTableDiff(oldTable.table, newTable.table)),
 			],
 		};
 	}
 
-	private async getTable(maxDate?: Date) {
+	private async getTable(
+		maxDate?: Date,
+		rankerOptions?: Partial<RankerOptions>,
+	) {
 		const fixtures = await this.database.getFixtures(maxDate);
 		const players = await this.database.getPlayers();
 
-		return calculatePlayerRanks(fixtures, keyByPlayerName(players));
+		return {
+			fixtures,
+			...calculatePlayerRanks(
+				fixtures,
+				keyByPlayerName(players),
+				rankerOptions,
+			),
+		};
 	}
 
 	private async getTableDiff(
@@ -220,7 +277,7 @@ export class CommandHandler {
 	}
 
 	public async table() {
-		const summary = getSummary(await this.getTable());
+		const summary = getSummary((await this.getTable()).table);
 
 		return {
 			response_type: 'in_channel',

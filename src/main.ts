@@ -13,8 +13,9 @@ if (require.main === module) {
 
 			const commandHandler = new CommandHandler(database, config);
 
+			// For testing purposes
 			if (process.argv[2] === '--viewDb') {
-				console.log(await commandHandler.table());
+				console.log(await commandHandler.stats());
 
 				await database.teardown();
 

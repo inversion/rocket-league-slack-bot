@@ -6,10 +6,15 @@ import { DEBUG_NAME } from './debugName';
 const debug = require('debug')(DEBUG_NAME);
 
 export type Players = Record<string, Player>;
-interface Options {
+export interface RankerOptions {
 	useMovm: boolean;
 	useDecay: boolean;
 	currentDate: Date;
+}
+
+interface Result {
+	fixture: Fixture;
+	scoreRatio: number;
 }
 
 /**
@@ -25,13 +30,15 @@ interface Options {
 export function calculatePlayerRanks(
 	fixtures: Fixture[],
 	players: Players = {},
-	rankingOptionsInput?: Partial<Options>,
+	rankingOptionsInput?: Partial<RankerOptions>,
 ) {
 	const rankingOptions = defaults(rankingOptionsInput || {}, {
 		useMovm: true,
 		useDecay: true,
 		currentDate: new Date(),
 	});
+
+	const results: Result[] = [];
 
 	for (const fixture of fixtures) {
 		const { blue, orange, date } = fixture;
@@ -59,7 +66,7 @@ ${blue.team.join(' ')} ${blue.goals} - ${orange.goals} ${orange.team.join(' ')}
 
 		`);
 
-		updateTeamScores(
+		const { scoreRatio } = updateTeamScores(
 			date,
 			blue,
 			orange,
@@ -80,14 +87,19 @@ ${blue.team.join(' ')} ${blue.goals} - ${orange.goals} ${orange.team.join(' ')}
 			rankingOptions,
 		);
 
+		results.push({ fixture, scoreRatio });
+
 		if (debug.enabled) {
 			debug(getSummary(Object.values(players)));
 		}
 	}
 
-	return Object.values(players)
-		.sort((a, b) => b.getScore() - a.getScore())
-		.filter(player => !player.hidden);
+	return {
+		results,
+		table: Object.values(players)
+			.sort((a, b) => b.getScore() - a.getScore())
+			.filter(player => !player.hidden),
+	};
 }
 
 export function formatRank(rank: number) {
@@ -187,7 +199,7 @@ function updateTeamScores(
 	theirScore: number,
 	K: number,
 	teamPlayers: Player[],
-	rankingOptions: Options,
+	rankingOptions: RankerOptions,
 ) {
 	const weWon = ourSide.goals > theirSide.goals;
 	const S = weWon ? 1 : 0;
@@ -243,6 +255,8 @@ function updateTeamScores(
 			player.incrementLosses();
 		}
 	});
+
+	return { scoreRatio };
 }
 
 /**
