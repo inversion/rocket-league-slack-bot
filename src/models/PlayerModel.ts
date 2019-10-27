@@ -18,4 +18,12 @@ export class PlayerModel extends BaseModel {
 	getWinEmoji() {
 		return `:${this.win_emoji || 'grinning'}:`;
 	}
+    
+    $parseDatabaseJson(json: Record<string, any>) {
+		json = super.$parseDatabaseJson(json);
+
+        json.hidden = json.hidden !== 'false' && json.hidden !== 0;
+
+		return json;
+	}
 }

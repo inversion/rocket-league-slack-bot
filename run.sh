@@ -5,4 +5,4 @@ set -o nounset
 
 yarn run knex migrate:latest
 
-exec node "$@"
+exec node --inspect=0.0.0.0:9229 "$@"

@@ -126,14 +126,8 @@ export class Database {
 	}
 
 	public async getFixtures(maxDate?: Date): Promise<Fixture[]> {
-		let query = FixtureModel.query(this.knex).eager('players');
+		const fixtureModels = await FixtureModel.query(this.knex).eager('players');
 
-		if (maxDate) {
-			query = query.where('date', '<=', maxDate);
-		}
-
-		const fixtureModels = await query;
-
-		return fixtureModels.map(model => model.toFixture());
+        return fixtureModels.map(model => model.toFixture()).filter(fixture => !maxDate || fixture.date <= maxDate);
 	}
 }

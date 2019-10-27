@@ -19,6 +19,7 @@ RUN yarn run build
 VOLUME /data
 
 EXPOSE 8888
+EXPOSE 9229
 
 ENTRYPOINT ["./run.sh"]
 CMD [ "src/main" ]
