@@ -171,9 +171,9 @@ export function getSummary(table: Player[]) {
 /**
  * Fixtures have less of an impact on score the further in the past they are.
  *
- * After a quarter of a year, fixtures will have no impact.
+ * After 6 weeks, fixtures will have no impact.
  */
-const DAILY_DECAY = 1 / (365 / 4);
+const DAILY_DECAY = 1 / 42;
 const DAY_MS = 24 * 3600 * 1000;
 
 /**
