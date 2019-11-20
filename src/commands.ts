@@ -260,9 +260,16 @@ ${this.matches(players, fixtures)}
 	}
 
 	public async changes(body: any) {
-		const oldTable = await this.getTable(addDays(new Date(), -1));
+		const playersPerSide = 2;
+		const fixtureFilter = (fixture: Fixture) =>
+			fixture.blue.team.length === playersPerSide &&
+			fixture.orange.team.length === playersPerSide;
+		const oldTable = await this.getTable(
+			addDays(new Date(), -1),
+			fixtureFilter,
+		);
 
-		const newTable = await this.getTable();
+		const newTable = await this.getTable(undefined, fixtureFilter);
 
 		return {
 			response_type: 'in_channel',
@@ -271,7 +278,7 @@ ${this.matches(players, fixtures)}
 					type: 'section',
 					text: {
 						type: 'mrkdwn',
-						text: `Changes in the table in the last 24 hours`,
+						text: `Changes in the ${playersPerSide}v${playersPerSide} table in the last 24 hours`,
 					},
 				},
 				{
@@ -377,7 +384,8 @@ ${this.matches(players, fixtures)}
 			}
 
 			playerCountFilter = (fixture: Fixture) =>
-				fixture.blue.team.length === playersPerSide;
+				fixture.blue.team.length === playersPerSide &&
+				fixture.orange.team.length === playersPerSide;
 		}
 
 		const summary = getSummary(
