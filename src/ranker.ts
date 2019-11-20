@@ -1,7 +1,9 @@
+import { formatChange } from './formatChange';
 import { Fixture, Side } from './Fixture';
 import { Player } from './Player';
 import { defaults } from 'lodash';
 import { DEBUG_NAME } from './debugName';
+import { differenceInDays } from 'date-fns';
 
 const debug = require('debug')(DEBUG_NAME);
 
@@ -67,6 +69,7 @@ ${blue.team.join(' ')} ${blue.goals} - ${orange.goals} ${orange.team.join(' ')}
 		`);
 
 		const { scoreRatio } = updateTeamScores(
+			fixture,
 			date,
 			blue,
 			orange,
@@ -77,6 +80,7 @@ ${blue.team.join(' ')} ${blue.goals} - ${orange.goals} ${orange.team.join(' ')}
 			rankingOptions,
 		);
 		updateTeamScores(
+			fixture,
 			date,
 			orange,
 			blue,
@@ -116,6 +120,11 @@ export function formatRank(rank: number) {
 	return `${rank}${suffix}`;
 }
 
+/**
+ * Players will be hidden from the table if they have not played for this many days.
+ */
+const TABLE_DISPLAY_CUTOFF_DAYS = 7;
+
 export function getSummary(table: Player[]) {
 	const headings = [
 		'Rank',
@@ -125,6 +134,11 @@ export function getSummary(table: Player[]) {
 		'Won',
 		'Lost',
 		'Win Ratio',
+		'GF',
+		'GA',
+		'GD',
+		'GF/GA',
+		'Idle Days',
 	];
 
 	const pad = (str: string) => str.padEnd(10, ' ');
@@ -132,18 +146,32 @@ export function getSummary(table: Player[]) {
 	return [
 		headings.map(pad).join(''),
 		...table
+			.filter(
+				player =>
+					differenceInDays(new Date(), player.getLastFixtureDate()) <=
+					TABLE_DISPLAY_CUTOFF_DAYS,
+			)
 			.map((player, i) => {
 				const played = player.getPlayed();
 				const wins = player.getWins();
 				const losses = player.getLosses();
+				const gf = player.getGoalsFor();
+				const ga = player.getGoalsAgainst();
+				const lastFixtureDate = player.getLastFixtureDate();
+				console.log(lastFixtureDate);
 				return [
 					formatRank(i + 1),
-					player.name,
+					player.name.substr(0, 7),
 					`${Math.round(player.score)}`,
 					`${played}`,
 					`${wins}`,
 					`${losses}`,
 					`${played === 0 ? 0 : (wins / played).toFixed(2)}`,
+					`${gf}`,
+					`${ga}`,
+					`${formatChange(gf - ga)}`,
+					`${ga === 0 ? 0 : (gf / ga).toFixed(2)}`,
+					`${differenceInDays(new Date(), lastFixtureDate)}`,
 				]
 					.map(pad)
 					.join('');
@@ -192,6 +220,7 @@ function clamp(min: number, max: number) {
 }
 
 function updateTeamScores(
+	fixture: Fixture,
 	date: Date,
 	ourSide: Side,
 	theirSide: Side,
@@ -247,13 +276,7 @@ function updateTeamScores(
 				playerOldScore}`,
 		);
 		player.setScore(playerNewScore);
-		player.incrementPlayed();
-
-		if (weWon) {
-			player.incrementWins();
-		} else {
-			player.incrementLosses();
-		}
+		player.trackFixture(fixture);
 	});
 
 	return { scoreRatio };

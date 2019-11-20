@@ -14,6 +14,7 @@ import { Config } from './config';
 import { Player } from './Player';
 import { flatten, uniq, compact } from 'lodash';
 import { PlayerModel } from './models/PlayerModel';
+import { formatChange } from './formatChange';
 
 const formatFixtureWithDate = (fixture: Fixture) =>
 	`${format(fixture.date, 'do MMM yyyy')} ${fixture.toString()}`;
@@ -24,16 +25,6 @@ function keyByPlayerName(players: Player[]): Players {
 
 		return acc;
 	}, {});
-}
-
-function formatChange(change: number) {
-	if (change === 0) {
-		return '';
-	} else if (change > 0) {
-		return `(+${change})`;
-	} else {
-		return `(${change})`;
-	}
 }
 
 export class CommandHandler {
