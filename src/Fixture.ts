@@ -41,7 +41,7 @@ export function parseFixturesFromString(str: string) {
 		.filter(line => line.length)
 		.map(line => {
 			const match = line.match(
-				/^((?:[@a-z]+\s*)+)\s+(\d+)\s+(\d+)\s+((?:[@a-z]\s*)+)$/,
+				/^((?:[@a-z_]+\s*)+)\s+(\d+)\s+(\d+)\s+((?:[@a-z_]\s*)+)$/,
 			);
 
 			if (!match) {
