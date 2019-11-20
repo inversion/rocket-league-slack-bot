@@ -14,7 +14,11 @@ if (require.main === module) {
 				const commandHandler = new CommandHandler(database, {} as any);
 				console.log(await commandHandler.history());
 				console.log(await commandHandler.stats());
-				console.log(await commandHandler.table());
+				console.log(await commandHandler.table(''));
+				console.log(await commandHandler.table('1v1'));
+				console.log(await commandHandler.table('2v2'));
+				console.log(await commandHandler.table('3v3'));
+				console.log(await commandHandler.table('all'));
 
 				await database.teardown();
 

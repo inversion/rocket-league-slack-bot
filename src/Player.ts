@@ -1,5 +1,11 @@
 import { INITIAL_SCORE } from './ranker';
 import { Fixture } from './Fixture';
+import { differenceInDays } from 'date-fns';
+
+/**
+ * Players will be hidden from the table if they have not played for this many days.
+ */
+const TABLE_DISPLAY_CUTOFF_DAYS = 7;
 
 export class Player {
 	private wins = 0;
@@ -69,6 +75,18 @@ export class Player {
 	public getLastFixtureDate() {
 		return this.fixtures.sort((a, b) => b.date.getTime() - a.date.getTime())[0]
 			.date;
+	}
+
+	public idleDays() {
+		return differenceInDays(new Date(), this.getLastFixtureDate());
+	}
+
+	public isActive() {
+		return (
+			!this.hidden &&
+			this.getPlayed() > 0 &&
+			this.idleDays() <= TABLE_DISPLAY_CUTOFF_DAYS
+		);
 	}
 
 	public getGoalsAgainst(): number {

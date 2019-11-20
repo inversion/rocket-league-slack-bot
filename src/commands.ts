@@ -34,7 +34,7 @@ export class CommandHandler {
 	) {}
 
 	async handleCommand(body: any) {
-		const command = body.command;
+		const { command, text } = body;
 
 		const commandPrefix =
 			process.env.NODE_ENV === 'production' ? '/rocket-' : '/';
@@ -42,7 +42,7 @@ export class CommandHandler {
 		if (command === `${commandPrefix}record`) {
 			return this.record(body);
 		} else if (command === `${commandPrefix}table`) {
-			return this.table();
+			return this.table(text);
 		} else if (command === `${commandPrefix}changes`) {
 			return this.changes(body);
 		} else if (command === `${commandPrefix}stats`) {
@@ -136,7 +136,7 @@ export class CommandHandler {
 	}
 
 	matches(players: Player[], fixtures: Fixture[]) {
-		const activePlayers = players.filter(player => !player.hidden);
+		const activePlayers = players.filter(player => player.isActive());
 
 		type Matches = Record<
 			string,
@@ -183,7 +183,7 @@ export class CommandHandler {
 		}
 
 		const formatMatch = ([name, times]: [string, number]) =>
-			`${name} (${times} times)`;
+			`${name} (${times} time${times === 1 ? '' : 's'})`;
 
 		return Object.values(matchesForPlayers)
 			.sort((a, b) => a.player.name.localeCompare(b.player.name))
@@ -193,11 +193,13 @@ export class CommandHandler {
 				);
 
 				const most = sortedMatches[sortedMatches.length - 1];
-				const least = sortedMatches[0];
 
 				return `${player.name} has played most with ${formatMatch(
 					most,
-				)} and least with ${formatMatch(least)}`;
+				)} and least with ${sortedMatches
+					.slice(0, 5)
+					.map(least => formatMatch(least))
+					.join(', ')}`;
 			})
 			.join('\n');
 	}
@@ -212,9 +214,13 @@ export class CommandHandler {
 	}
 
 	async stats() {
-		const { results, players, fixtures } = await this.getTable(undefined, {
-			useDecay: false,
-		});
+		const { results, players, fixtures } = await this.getTable(
+			undefined,
+			undefined,
+			{
+				useDecay: false,
+			},
+		);
 
 		if (!fixtures.length) {
 			return 'No stats yet - record some games!';
@@ -278,9 +284,15 @@ ${this.matches(players, fixtures)}
 
 	private async getTable(
 		maxDate?: Date,
+		fixtureFilter?: (fixture: Fixture) => boolean,
 		rankerOptions?: Partial<RankerOptions>,
 	) {
-		const fixtures = await this.database.getFixtures(maxDate);
+		let fixtures = await this.database.getFixtures(maxDate);
+
+		if (fixtureFilter) {
+			fixtures = fixtures.filter(fixtureFilter);
+		}
+
 		const players = await this.database.getPlayers();
 
 		return {
@@ -351,12 +363,38 @@ ${this.matches(players, fixtures)}
 		});
 	}
 
-	public async table() {
-		const summary = getSummary((await this.getTable()).table);
+	public async table(parameters: string) {
+		const filterParameter = parameters.match(/(\d+)v\1/);
+
+		let playerCountFilter;
+		let playersPerSide: number | undefined;
+
+		if (!parameters.includes('all')) {
+			if (filterParameter) {
+				playersPerSide = parseInt(filterParameter[1], 10);
+			} else {
+				playersPerSide = 2;
+			}
+
+			playerCountFilter = (fixture: Fixture) =>
+				fixture.blue.team.length === playersPerSide;
+		}
+
+		const summary = getSummary(
+			(await this.getTable(undefined, playerCountFilter)).table,
+		);
 
 		return {
 			response_type: 'in_channel',
-			text: '```' + summary + '```',
+			text:
+				`${
+					playersPerSide !== undefined
+						? `${playersPerSide}v${playersPerSide}`
+						: 'All Games'
+				} League:\n` +
+				'```' +
+				summary +
+				'```',
 		};
 	}
 

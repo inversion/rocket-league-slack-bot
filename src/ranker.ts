@@ -3,7 +3,6 @@ import { Fixture, Side } from './Fixture';
 import { Player } from './Player';
 import { defaults } from 'lodash';
 import { DEBUG_NAME } from './debugName';
-import { differenceInDays } from 'date-fns';
 
 const debug = require('debug')(DEBUG_NAME);
 
@@ -102,7 +101,7 @@ ${blue.team.join(' ')} ${blue.goals} - ${orange.goals} ${orange.team.join(' ')}
 		results,
 		table: Object.values(players)
 			.sort((a, b) => b.getScore() - a.getScore())
-			.filter(player => !player.hidden),
+			.filter(player => player.isActive()),
 	};
 }
 
@@ -119,11 +118,6 @@ export function formatRank(rank: number) {
 
 	return `${rank}${suffix}`;
 }
-
-/**
- * Players will be hidden from the table if they have not played for this many days.
- */
-const TABLE_DISPLAY_CUTOFF_DAYS = 7;
 
 export function getSummary(table: Player[]) {
 	const headings = [
@@ -146,18 +140,13 @@ export function getSummary(table: Player[]) {
 	return [
 		headings.map(pad).join(''),
 		...table
-			.filter(
-				player =>
-					differenceInDays(new Date(), player.getLastFixtureDate()) <=
-					TABLE_DISPLAY_CUTOFF_DAYS,
-			)
+			.filter(player => player.isActive())
 			.map((player, i) => {
 				const played = player.getPlayed();
 				const wins = player.getWins();
 				const losses = player.getLosses();
 				const gf = player.getGoalsFor();
 				const ga = player.getGoalsAgainst();
-				const lastFixtureDate = player.getLastFixtureDate();
 				return [
 					formatRank(i + 1),
 					player.name.substr(0, 7),
@@ -170,7 +159,7 @@ export function getSummary(table: Player[]) {
 					`${ga}`,
 					`${formatChange(gf - ga)}`,
 					`${ga === 0 ? 0 : (gf / ga).toFixed(2)}`,
-					`${differenceInDays(new Date(), lastFixtureDate)}`,
+					`${player.idleDays()}`,
 				]
 					.map(pad)
 					.join('');
