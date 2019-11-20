@@ -158,7 +158,6 @@ export function getSummary(table: Player[]) {
 				const gf = player.getGoalsFor();
 				const ga = player.getGoalsAgainst();
 				const lastFixtureDate = player.getLastFixtureDate();
-				console.log(lastFixtureDate);
 				return [
 					formatRank(i + 1),
 					player.name.substr(0, 7),
