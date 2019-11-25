@@ -163,7 +163,7 @@ export class CommandHandler {
 				{
 					type: 'divider',
 				},
-				...tableDiffs,
+				...flatten(tableDiffs),
 			],
 		};
 	}
