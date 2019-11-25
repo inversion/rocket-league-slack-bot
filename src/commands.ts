@@ -69,13 +69,50 @@ export class CommandHandler {
 		}
 		const fixtures = parseFixturesFromString(body.text);
 
-		const oldTable = await this.getTable();
+		if (!fixtures.length) {
+			return;
+		}
+
+		const tableDiffs = await Promise.all(
+			Object.values(
+				fixtures.reduce<Record<number, number>>((acc, fixture) => {
+					const blueLength = fixture.blue.team.length;
+					const orangeLength = fixture.orange.team.length;
+
+					if (blueLength === orangeLength) {
+						acc[blueLength] = blueLength;
+					}
+
+					return acc;
+				}, {}),
+			).map(async playersPerSide => {
+				const fixtureFilter = this.getPlayerCountFilter(playersPerSide);
+				const oldTable = await this.getTable(undefined, fixtureFilter);
+
+				const newTable = await this.getTable(undefined, fixtureFilter);
+
+				const diff = await this.getTableDiff(
+					oldTable.table,
+					newTable.table,
+					involvedPlayers,
+				);
+
+				return [
+					{
+						type: 'section',
+						text: {
+							type: 'mrkdwn',
+							text: `${playersPerSide}v${playersPerSide} league changes:`,
+						},
+					},
+					...diff,
+				];
+			}),
+		);
 
 		const fixtureModels = await Promise.all(
 			fixtures.map(fixture => this.database.saveFixture(fixture)),
 		);
-
-		const newTable = await this.getTable();
 
 		const playerModels = await this.database.getPlayerModels();
 
@@ -126,11 +163,7 @@ export class CommandHandler {
 				{
 					type: 'divider',
 				},
-				...(await this.getTableDiff(
-					oldTable.table,
-					newTable.table,
-					involvedPlayers,
-				)),
+				...tableDiffs,
 			],
 		};
 	}
@@ -278,7 +311,7 @@ ${this.matches(players, fixtures)}
 					type: 'section',
 					text: {
 						type: 'mrkdwn',
-						text: `Changes in the ${playersPerSide}v${playersPerSide} table in the last 24 hours`,
+						text: `Changes in the ${playersPerSide}v${playersPerSide} league in the last 24 hours`,
 					},
 				},
 				{
@@ -331,43 +364,53 @@ ${this.matches(players, fixtures)}
 				return bScore - aScore;
 			});
 
-		return models.map(playerModel => {
-			const oldRank = oldTable.findIndex(
-				player => player.name === playerModel.name,
-			);
-			const oldRecord = oldRank !== -1 ? oldTable[oldRank] : undefined;
+		return compact(
+			models.map(playerModel => {
+				const oldRank = oldTable.findIndex(
+					player => player.name === playerModel.name,
+				);
+				const oldRecord = oldRank !== -1 ? oldTable[oldRank] : undefined;
 
-			const newRank = newTable.findIndex(
-				player => player.name === playerModel.name,
-			);
-			const newRecord = newTable[newRank];
+				const newRank = newTable.findIndex(
+					player => player.name === playerModel.name,
+				);
+				const newRecord = newRank !== -1 ? newTable[newRank] : undefined;
 
-			const scoreChange = Math.round(
-				newRecord.getScore() -
-					(oldRecord ? oldRecord.getScore() : INITIAL_SCORE),
-			);
+				if (!oldRecord || !newRecord) {
+					return;
+				}
 
-			const rankChange = oldRank ? oldRank - newRank : 0;
+				const scoreChange = Math.round(
+					newRecord.getScore() -
+						(oldRecord ? oldRecord.getScore() : INITIAL_SCORE),
+				);
 
-			const rankChangeEmoji =
-				rankChange === 0 ? '' : rankChange > 0 ? ':arrow_up:' : ':arrow_down:';
+				const rankChange = oldRank ? oldRank - newRank : 0;
 
-			return {
-				type: 'section',
-				text: {
-					type: 'mrkdwn',
-					text: `${
-						scoreChange > 0
-							? playerModel.getWinEmoji()
-							: playerModel.getLoseEmoji()
-					} ${playerModel.name} - Score: ${Math.round(
-						newRecord.getScore(),
-					)} ${formatChange(scoreChange)}. Rank: ${formatRank(
-						newRank + 1,
-					)} ${formatChange(rankChange)} ${rankChangeEmoji}`,
-				},
-			};
-		});
+				const rankChangeEmoji =
+					rankChange === 0
+						? ''
+						: rankChange > 0
+						? ':arrow_up:'
+						: ':arrow_down:';
+
+				return {
+					type: 'section',
+					text: {
+						type: 'mrkdwn',
+						text: `${
+							scoreChange > 0
+								? playerModel.getWinEmoji()
+								: playerModel.getLoseEmoji()
+						} ${playerModel.name} - Score: ${Math.round(
+							newRecord.getScore(),
+						)} ${formatChange(scoreChange)}. Rank: ${formatRank(
+							newRank + 1,
+						)} ${formatChange(rankChange)} ${rankChangeEmoji}`,
+					},
+				};
+			}),
+		);
 	}
 
 	public async table(parameters: string) {
@@ -383,9 +426,7 @@ ${this.matches(players, fixtures)}
 				playersPerSide = 2;
 			}
 
-			playerCountFilter = (fixture: Fixture) =>
-				fixture.blue.team.length === playersPerSide &&
-				fixture.orange.team.length === playersPerSide;
+			playerCountFilter = this.getPlayerCountFilter(playersPerSide);
 		}
 
 		const summary = getSummary(
@@ -404,6 +445,11 @@ ${this.matches(players, fixtures)}
 				summary +
 				'```',
 		};
+	}
+	getPlayerCountFilter(playersPerSide: number) {
+		return (fixture: Fixture) =>
+			fixture.blue.team.length === playersPerSide &&
+			fixture.orange.team.length === playersPerSide;
 	}
 
 	async handleInteraction(payload: any) {
