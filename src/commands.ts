@@ -73,6 +73,23 @@ export class CommandHandler {
 			return;
 		}
 
+		const fixtureModels = await Promise.all(
+			fixtures.map(fixture => this.database.saveFixture(fixture)),
+		);
+
+		const playerModels = await this.database.getPlayerModels();
+
+		const involvedPlayers = compact(
+			uniq(
+				flatten(
+					fixtures.map(fixture => [
+						...fixture.blue.team,
+						...fixture.orange.team,
+					]),
+				),
+			).map(name => playerModels.find(model => model.name === name)),
+		);
+
 		const tableDiffs = await Promise.all(
 			Object.values(
 				fixtures.reduce<Record<number, number>>((acc, fixture) => {
@@ -108,23 +125,6 @@ export class CommandHandler {
 					...diff,
 				];
 			}),
-		);
-
-		const fixtureModels = await Promise.all(
-			fixtures.map(fixture => this.database.saveFixture(fixture)),
-		);
-
-		const playerModels = await this.database.getPlayerModels();
-
-		const involvedPlayers = compact(
-			uniq(
-				flatten(
-					fixtures.map(fixture => [
-						...fixture.blue.team,
-						...fixture.orange.team,
-					]),
-				),
-			).map(name => playerModels.find(model => model.name === name)),
 		);
 
 		const date = new Date();
