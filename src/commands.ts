@@ -354,14 +354,15 @@ ${this.matches(players, fixtures)}
 		const models = (involvedPlayers || (await this.database.getPlayerModels()))
 			.filter(model => !model.hidden)
 			.sort((a, b) => {
-				const aScore = newTable
-					.find(player => player.name === a.name)!
-					.getScore();
-				const bScore = newTable
-					.find(player => player.name === b.name)!
-					.getScore();
+				const aPlayer = newTable.find(player => player.name === a.name);
 
-				return bScore - aScore;
+				const bPlayer = newTable.find(player => player.name === b.name);
+
+				if (!aPlayer || !bPlayer) {
+					return 0;
+				}
+
+				return bPlayer.getScore() - aPlayer.getScore();
 			});
 
 		return compact(
