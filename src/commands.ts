@@ -73,10 +73,6 @@ export class CommandHandler {
 			return;
 		}
 
-		const fixtureModels = await Promise.all(
-			fixtures.map(fixture => this.database.saveFixture(fixture)),
-		);
-
 		const playerModels = await this.database.getPlayerModels();
 
 		const involvedPlayers = compact(
@@ -90,21 +86,39 @@ export class CommandHandler {
 			).map(name => playerModels.find(model => model.name === name)),
 		);
 
+		const playersPerSideList = Object.values(
+			fixtures.reduce<Record<number, number>>((acc, fixture) => {
+				const blueLength = fixture.blue.team.length;
+				const orangeLength = fixture.orange.team.length;
+
+				if (blueLength === orangeLength) {
+					acc[blueLength] = blueLength;
+				}
+
+				return acc;
+			}, {}),
+		);
+
+		const oldTables = Object.assign(
+			{},
+			...(await Promise.all(
+				playersPerSideList.map(async playersPerSide => ({
+					[playersPerSide]: await this.getTable(
+						undefined,
+						this.getPlayerCountFilter(playersPerSide),
+					),
+				})),
+			)),
+		);
+
+		const fixtureModels = await Promise.all(
+			fixtures.map(fixture => this.database.saveFixture(fixture)),
+		);
+
 		const tableDiffs = await Promise.all(
-			Object.values(
-				fixtures.reduce<Record<number, number>>((acc, fixture) => {
-					const blueLength = fixture.blue.team.length;
-					const orangeLength = fixture.orange.team.length;
-
-					if (blueLength === orangeLength) {
-						acc[blueLength] = blueLength;
-					}
-
-					return acc;
-				}, {}),
-			).map(async playersPerSide => {
+			playersPerSideList.map(async playersPerSide => {
 				const fixtureFilter = this.getPlayerCountFilter(playersPerSide);
-				const oldTable = await this.getTable(undefined, fixtureFilter);
+				const oldTable = oldTables[playersPerSide];
 
 				const newTable = await this.getTable(undefined, fixtureFilter);
 

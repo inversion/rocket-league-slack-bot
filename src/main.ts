@@ -19,6 +19,15 @@ if (require.main === module) {
 				console.log(await commandHandler.table('2v2'));
 				console.log(await commandHandler.table('3v3'));
 				console.log(await commandHandler.table('all'));
+				console.log(
+					JSON.stringify(
+						await commandHandler.record({
+							text: '@jack @owen 1 5 @hugh @andrew',
+						}),
+						null,
+						2,
+					),
+				);
 
 				await database.teardown();
 
