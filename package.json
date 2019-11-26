@@ -38,6 +38,7 @@
 		"test": "./node_modules/.bin/jest src/*.test.js",
 		"knex": "./node_modules/.bin/knex",
 		"main": "node src/main",
+		"main-inspect": "node --inspect-brk src/main",
 		"main-watch": "export $(cat .env | xargs) && ./node_modules/.bin/nodemon --inspect src/main"
 	},
 	"dependencies": {
