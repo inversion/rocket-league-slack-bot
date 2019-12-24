@@ -7,6 +7,7 @@ import {
 	INITIAL_SCORE,
 	formatRank,
 	RankerOptions,
+	K_FACTOR,
 } from './ranker';
 import request from 'request-promise-native';
 import { format, addDays } from 'date-fns';
@@ -283,6 +284,8 @@ export class CommandHandler {
 
 		const biggestUpsets = results
 			.slice()
+			// Exclude new games
+			.filter(result => result.kFactor < K_FACTOR.NEW)
 			.sort((a, b) => b.scoreRatio - a.scoreRatio)
 			.slice(0, NUM_TO_SHOW);
 

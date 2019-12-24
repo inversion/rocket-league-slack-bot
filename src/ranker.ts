@@ -16,6 +16,7 @@ export interface RankerOptions {
 interface Result {
 	fixture: Fixture;
 	scoreRatio: number;
+	kFactor: number;
 }
 
 /**
@@ -59,7 +60,7 @@ export function calculatePlayerRanks(
 			(minPlayed, player) => Math.min(minPlayed, player.getPlayed()),
 			Number.POSITIVE_INFINITY,
 		);
-		const K = kFactor(minPlayed);
+		const kFactor = determineKFactor(minPlayed);
 
 		debug(`Game summary:
 ${date.toISOString()}
@@ -74,7 +75,7 @@ ${blue.team.join(' ')} ${blue.goals} - ${orange.goals} ${orange.team.join(' ')}
 			orange,
 			scoreBlue,
 			scoreOrange,
-			K,
+			kFactor,
 			bluePlayers,
 			rankingOptions,
 		);
@@ -85,12 +86,12 @@ ${blue.team.join(' ')} ${blue.goals} - ${orange.goals} ${orange.team.join(' ')}
 			blue,
 			scoreOrange,
 			scoreBlue,
-			K,
+			kFactor,
 			orangePlayers,
 			rankingOptions,
 		);
 
-		results.push({ fixture, scoreRatio });
+		results.push({ kFactor, fixture, scoreRatio });
 
 		if (debug.enabled) {
 			debug(getSummary(Object.values(players)));
@@ -270,16 +271,21 @@ function updateTeamScores(
 	return { scoreRatio };
 }
 
+export const enum K_FACTOR {
+	NORMAL = 30,
+	NEW = 60,
+}
+
 /**
  * Use a larger K factor when fewer games have been played so that the rankings adjust more quickly.
  *
  * @param played
  */
-function kFactor(played: number) {
+function determineKFactor(played: number) {
 	if (played < 5) {
-		return 60;
+		return K_FACTOR.NEW;
 	} else {
-		return 30;
+		return K_FACTOR.NORMAL;
 	}
 }
 
