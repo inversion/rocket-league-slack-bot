@@ -145,6 +145,7 @@ export class CommandHandler {
 
 		return {
 			response_type: 'in_channel',
+			link_names: false,
 			blocks: [
 				{
 					type: 'section',
