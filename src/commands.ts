@@ -310,17 +310,17 @@ ${this.matches(players, fixtures)}
 		};
 	}
 
-	public async changes(body: any) {
-		const playersPerSide = 2;
-		const fixtureFilter = (fixture: Fixture) =>
-			fixture.blue.team.length === playersPerSide &&
-			fixture.orange.team.length === playersPerSide;
-		const oldTable = await this.getTable(
-			addDays(new Date(), -1),
-			fixtureFilter,
+	public async changes(parameters: any) {
+		const { playersPerSide, playerCountFilter } = this.parsePlayersPerSide(
+			parameters,
 		);
 
-		const newTable = await this.getTable(undefined, fixtureFilter);
+		const oldTable = await this.getTable(
+			addDays(new Date(), -1),
+			playerCountFilter,
+		);
+
+		const newTable = await this.getTable(undefined, playerCountFilter);
 
 		return {
 			response_type: 'in_channel',
@@ -432,10 +432,9 @@ ${this.matches(players, fixtures)}
 		);
 	}
 
-	public async table(parameters: string) {
+	private parsePlayersPerSide(parameters: string) {
 		const filterParameter = parameters.match(/(\d+)v\1/);
 
-		let playerCountFilter;
 		let playersPerSide: number | undefined;
 
 		if (!parameters.includes('all')) {
@@ -444,9 +443,20 @@ ${this.matches(players, fixtures)}
 			} else {
 				playersPerSide = 2;
 			}
-
-			playerCountFilter = this.getPlayerCountFilter(playersPerSide);
 		}
+
+		const playerCountFilter =
+			playersPerSide !== undefined
+				? this.getPlayerCountFilter(playersPerSide)
+				: undefined;
+
+		return { playersPerSide, playerCountFilter };
+	}
+
+	public async table(parameters: string) {
+		const { playersPerSide, playerCountFilter } = this.parsePlayersPerSide(
+			parameters,
+		);
 
 		const summary = getSummary(
 			(await this.getTable(undefined, playerCountFilter)).table,
