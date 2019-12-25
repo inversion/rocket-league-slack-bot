@@ -8,7 +8,7 @@ RUN chown node /app
 USER node
 
 COPY --chown=node context/package.json context/yarn.lock ./
-RUN yarn --frozen-lockfile --non-interactive --production=false --no-cache
+RUN yarn --frozen-lockfile --non-interactive --production=false --no-cache && yarn cache clean
 
 COPY --chown=node context/tsconfig.json context/run.sh context/knexfile.js ./
 COPY --chown=node context/migrations ./migrations
