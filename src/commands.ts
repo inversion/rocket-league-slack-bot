@@ -28,13 +28,18 @@ function keyByPlayerName(players: Player[]): Players {
 	}, {});
 }
 
+interface SlackCommandBody {
+	text: string;
+	command: string;
+}
+
 export class CommandHandler {
 	constructor(
 		private readonly database: Database,
 		private readonly config: Config,
 	) {}
 
-	async handleCommand(body: any) {
+	async handleCommand(body: SlackCommandBody) {
 		const { command, text } = body;
 
 		const commandPrefix =
@@ -45,7 +50,7 @@ export class CommandHandler {
 		} else if (command === `${commandPrefix}table`) {
 			return this.table(text);
 		} else if (command === `${commandPrefix}changes`) {
-			return this.changes(body);
+			return this.changes(text);
 		} else if (command === `${commandPrefix}stats`) {
 			return this.stats();
 		} else if (command === `${commandPrefix}history`) {
@@ -310,7 +315,7 @@ ${this.matches(players, fixtures)}
 		};
 	}
 
-	public async changes(parameters: any) {
+	public async changes(parameters: string) {
 		const { playersPerSide, playerCountFilter } = this.parsePlayersPerSide(
 			parameters,
 		);
