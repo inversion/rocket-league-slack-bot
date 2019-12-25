@@ -300,7 +300,7 @@ ${biggestVictories
 	)
 	.join('\n')}
 
-Biggest Upsets:
+Biggest Upsets (excludes games for new players):
 ${biggestUpsets.map(({ fixture }) => formatFixtureWithDate(fixture)).join('\n')}
 		
 ${this.matches(players, fixtures)}
