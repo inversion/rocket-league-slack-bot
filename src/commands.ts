@@ -150,7 +150,6 @@ export class CommandHandler {
 
 		return {
 			response_type: 'in_channel',
-			link_names: false,
 			blocks: [
 				{
 					type: 'section',
@@ -326,6 +325,7 @@ ${this.matches(players, fixtures)}
 
 		return {
 			response_type: 'in_channel',
+			link_names: false,
 			blocks: [
 				{
 					type: 'section',
