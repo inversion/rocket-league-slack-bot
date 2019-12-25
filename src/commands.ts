@@ -109,10 +109,9 @@ export class CommandHandler {
 			{},
 			...(await Promise.all(
 				playersPerSideList.map(async playersPerSide => ({
-					[playersPerSide]: await this.getTable(
-						undefined,
-						this.getPlayerCountFilter(playersPerSide),
-					),
+					[playersPerSide]: await this.getTable({
+						fixtureFilter: this.createFixtureFilter(playersPerSide),
+					}),
 				})),
 			)),
 		);
@@ -123,10 +122,10 @@ export class CommandHandler {
 
 		const tableDiffs = await Promise.all(
 			playersPerSideList.map(async playersPerSide => {
-				const fixtureFilter = this.getPlayerCountFilter(playersPerSide);
+				const fixtureFilter = this.createFixtureFilter(playersPerSide);
 				const oldTable = oldTables[playersPerSide];
 
-				const newTable = await this.getTable(undefined, fixtureFilter);
+				const newTable = await this.getTable({ fixtureFilter });
 
 				const diff = await this.getTableDiff(
 					oldTable.table,
@@ -268,13 +267,11 @@ export class CommandHandler {
 	}
 
 	async stats() {
-		const { results, players, fixtures } = await this.getTable(
-			undefined,
-			undefined,
-			{
+		const { results, players, fixtures } = await this.getTable({
+			rankerOptions: {
 				useDecay: false,
 			},
-		);
+		});
 
 		if (!fixtures.length) {
 			return 'No stats yet - record some games!';
@@ -316,16 +313,16 @@ ${this.matches(players, fixtures)}
 	}
 
 	public async changes(parameters: string) {
-		const { playersPerSide, playerCountFilter } = this.parsePlayersPerSide(
+		const { filterDescription, fixtureFilter } = await this.createFilters(
 			parameters,
 		);
 
-		const oldTable = await this.getTable(
-			addDays(new Date(), -1),
-			playerCountFilter,
-		);
+		const oldTable = await this.getTable({
+			maxDate: addDays(new Date(), -1),
+			fixtureFilter,
+		});
 
-		const newTable = await this.getTable(undefined, playerCountFilter);
+		const newTable = await this.getTable({ fixtureFilter });
 
 		return {
 			response_type: 'in_channel',
@@ -334,7 +331,7 @@ ${this.matches(players, fixtures)}
 					type: 'section',
 					text: {
 						type: 'mrkdwn',
-						text: `Changes in the ${playersPerSide}v${playersPerSide} league in the last 24 hours`,
+						text: `Changes in the ${filterDescription} in the last 24 hours`,
 					},
 				},
 				{
@@ -345,11 +342,15 @@ ${this.matches(players, fixtures)}
 		};
 	}
 
-	private async getTable(
-		maxDate?: Date,
-		fixtureFilter?: (fixture: Fixture) => boolean,
-		rankerOptions?: Partial<RankerOptions>,
-	) {
+	private async getTable({
+		maxDate,
+		fixtureFilter,
+		rankerOptions,
+	}: {
+		maxDate?: Date;
+		fixtureFilter?: (fixture: Fixture) => boolean;
+		rankerOptions?: Partial<RankerOptions>;
+	} = {}) {
 		let fixtures = await this.database.getFixtures(maxDate);
 
 		if (fixtureFilter) {
@@ -437,7 +438,7 @@ ${this.matches(players, fixtures)}
 		);
 	}
 
-	private parsePlayersPerSide(parameters: string) {
+	private async createFilters(parameters: string) {
 		const filterParameter = parameters.match(/(\d+)v\1/);
 
 		let playersPerSide: number | undefined;
@@ -450,38 +451,47 @@ ${this.matches(players, fixtures)}
 			}
 		}
 
-		const playerCountFilter =
+		const fixtureFilter =
 			playersPerSide !== undefined
-				? this.getPlayerCountFilter(playersPerSide)
+				? this.createFixtureFilter(playersPerSide)
 				: undefined;
 
-		return { playersPerSide, playerCountFilter };
+		const currentSeason = await this.database.getCurrentSeason();
+
+		const seasonDescription = currentSeason?.description();
+
+		return {
+			fixtureFilter,
+			playersPerSide,
+			seasonDescription,
+			filterDescription: [
+				playersPerSide !== undefined
+					? `${playersPerSide}v${playersPerSide}`
+					: 'Overall',
+				'League',
+				seasonDescription,
+			]
+				.filter(item => !!item)
+				.join(' '),
+		};
 	}
 
 	public async table(parameters: string) {
-		const { playersPerSide, playerCountFilter } = this.parsePlayersPerSide(
+		const { filterDescription, fixtureFilter } = await this.createFilters(
 			parameters,
 		);
 
-		const summary = getSummary(
-			(await this.getTable(undefined, playerCountFilter)).table,
-		);
+		const summary = getSummary((await this.getTable({ fixtureFilter })).table);
 
 		return {
 			response_type: 'in_channel',
-			text:
-				`${
-					playersPerSide !== undefined
-						? `${playersPerSide}v${playersPerSide}`
-						: 'All Games'
-				} League:\n` +
-				'```' +
-				summary +
-				'```',
+			text: filterDescription + `\n` + '```' + summary + '```',
 		};
 	}
-	getPlayerCountFilter(playersPerSide: number) {
+
+	private createFixtureFilter(playersPerSide: number, minDate?: Date) {
 		return (fixture: Fixture) =>
+			(minDate ? fixture.date >= minDate : true) &&
 			fixture.blue.team.length === playersPerSide &&
 			fixture.orange.team.length === playersPerSide;
 	}

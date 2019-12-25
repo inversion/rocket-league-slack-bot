@@ -4,6 +4,7 @@ import knexfile from '../knexfile';
 import { Fixture } from './Fixture';
 import { FixtureModel, FixturePlayerModel } from './models/FixtureModel';
 import { PlayerModel } from './models/PlayerModel';
+import { SeasonModel } from './models/SeasonModel';
 import { FixturesToPlayersModel } from './models/FixturesToPlayersModel';
 import { TEAM_ID } from './data/TeamId';
 import { Player } from './Player';
@@ -131,5 +132,18 @@ export class Database {
 		return fixtureModels
 			.map(model => model.toFixture())
 			.filter(fixture => !maxDate || fixture.date <= maxDate);
+	}
+
+	public async getSeasons(): Promise<SeasonModel[]> {
+		return SeasonModel.query(this.knex);
+	}
+
+	public async getCurrentSeason(): Promise<SeasonModel | undefined> {
+		const seasons = await this.getSeasons();
+
+		return seasons
+			.filter(season => season.start_date <= new Date())
+			.sort((a, b) => a.start_date.getTime() - b.start_date.getTime())
+			.slice(-1)[0];
 	}
 }
