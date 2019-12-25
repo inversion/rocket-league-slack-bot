@@ -325,7 +325,6 @@ ${this.matches(players, fixtures)}
 
 		return {
 			response_type: 'in_channel',
-			link_names: false,
 			blocks: [
 				{
 					type: 'section',
@@ -422,6 +421,7 @@ ${this.matches(players, fixtures)}
 				return {
 					type: 'section',
 					text: {
+						verbatim: true,
 						type: 'mrkdwn',
 						text: `${
 							scoreChange > 0
