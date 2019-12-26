@@ -6,3 +6,4 @@ yarn-error.log
 data.db
 *.sqlite3
 .env
+.vscode
