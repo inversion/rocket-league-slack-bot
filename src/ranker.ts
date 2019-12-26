@@ -11,12 +11,42 @@ export interface RankerOptions {
 	useMovm: boolean;
 	useDecay: boolean;
 	currentDate: Date;
+	/** If specified, fixtures involving players who have played fewer than this many fixtures not count towards the ranking */
+	minimumFixtureCount?: number;
 }
 
 interface Result {
 	fixture: Fixture;
 	scoreRatio: number;
 	kFactor: number;
+}
+
+function filterForMinimumFixtureCount(
+	fixtures: Fixture[],
+	minimumFixtureCount: number,
+): Fixture[] {
+	const players: Players = {};
+
+	for (const fixture of fixtures) {
+		const { blue, orange } = fixture;
+		const involved = [
+			...ensurePlayersExist(players, blue),
+			...ensurePlayersExist(players, orange),
+		];
+
+		for (const player of involved) {
+			player.trackFixture(fixture);
+		}
+	}
+
+	const getPlayedCount = (name: string) => players[name].getPlayed();
+
+	return fixtures.filter(fixture =>
+		[
+			...fixture.orange.team.map(getPlayedCount),
+			...fixture.blue.team.map(getPlayedCount),
+		].every(count => count >= minimumFixtureCount),
+	);
 }
 
 /**
@@ -41,6 +71,11 @@ export function calculatePlayerRanks(
 	});
 
 	const results: Result[] = [];
+
+	const { minimumFixtureCount } = rankingOptions;
+	if (minimumFixtureCount) {
+		fixtures = filterForMinimumFixtureCount(fixtures, minimumFixtureCount);
+	}
 
 	for (const fixture of fixtures) {
 		const { blue, orange, date } = fixture;
@@ -106,9 +141,7 @@ export function calculatePlayerRanks(
 
 	return {
 		results,
-		table: Object.values(players)
-			.sort(sortByScore)
-			.filter(player => player.isActive()),
+		table: Object.values(players).sort(sortByScore),
 	};
 }
 

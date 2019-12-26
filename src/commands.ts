@@ -439,37 +439,47 @@ ${this.matches(players, fixtures)}
 	}
 
 	private async createFilters(parameters: string) {
-		const filterParameter = parameters.match(/(\d+)v\1/);
+		const playerCountMatch = parameters.match(/(\d+)v\1/);
 
 		let playersPerSide: number | undefined;
 
 		if (!parameters.includes('all')) {
-			if (filterParameter) {
-				playersPerSide = parseInt(filterParameter[1], 10);
+			if (playerCountMatch) {
+				playersPerSide = parseInt(playerCountMatch[1], 10);
 			} else {
 				playersPerSide = 2;
 			}
 		}
 
-		const fixtureFilter =
-			playersPerSide !== undefined
-				? this.createFixtureFilter(playersPerSide)
-				: undefined;
+		const seasonMatch = parameters.match(/s(\d+)/);
 
 		const currentSeason = await this.database.getCurrentSeason();
+		const season =
+			(seasonMatch &&
+				(await this.database.getSeasons()).find(
+					season => season.id === parseInt(seasonMatch[1], 10),
+				)) ||
+			currentSeason;
 
-		const seasonDescription = currentSeason?.description();
+		const fixtureFilter =
+			playersPerSide !== undefined
+				? this.createFixtureFilter(playersPerSide, season?.start_date)
+				: undefined;
 
+		const seasonDescription = season?.description();
+		const isCurrentSeason = currentSeason?.id === season?.id;
 		return {
 			fixtureFilter,
 			playersPerSide,
 			seasonDescription,
+			isCurrentSeason,
 			filterDescription: [
 				playersPerSide !== undefined
 					? `${playersPerSide}v${playersPerSide}`
 					: 'Overall',
 				'League',
 				seasonDescription,
+				!isCurrentSeason && '(End of Season Table)',
 			]
 				.filter(item => !!item)
 				.join(' '),
@@ -477,11 +487,23 @@ ${this.matches(players, fixtures)}
 	}
 
 	public async table(parameters: string) {
-		const { filterDescription, fixtureFilter } = await this.createFilters(
-			parameters,
-		);
+		const {
+			filterDescription,
+			fixtureFilter,
+			isCurrentSeason,
+		} = await this.createFilters(parameters);
 
-		const summary = getSummary((await this.getTable({ fixtureFilter })).table);
+		const summary = getSummary(
+			(
+				await this.getTable({
+					fixtureFilter,
+					rankerOptions: {
+						minimumFixtureCount: isCurrentSeason ? undefined : 10,
+					},
+				})
+			).table,
+			{ includeIdle: !isCurrentSeason },
+		);
 
 		return {
 			response_type: 'in_channel',
