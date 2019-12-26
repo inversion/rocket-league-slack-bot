@@ -255,20 +255,33 @@ function updateTeamScores(
 			? 1 + (baseScoreRatio - 1) * (1 - decayFactor)
 			: 1 - (1 - baseScoreRatio) * (1 - decayFactor);
 
-	debug(
-		`won=${weWon} movm=${movm} E=${E} decayFactor=${decayFactor} ourScore=${ourScore} ourNewScore=${ourNewScore} baseScoreRatio=${baseScoreRatio} scoreRatio=${scoreRatio}`,
-	);
+	if (debug.enabled) {
+		debug(
+			`won=${weWon} movm=${movm.toFixed(2)} E=${E.toFixed(
+				2,
+			)} decayFactor=${decayFactor.toFixed(2)} ourScore=${ourScore.toFixed(
+				2,
+			)} ourNewScore=${ourNewScore.toFixed(
+				2,
+			)} baseScoreRatio=${baseScoreRatio.toFixed(
+				2,
+			)} scoreRatio=${scoreRatio.toFixed(2)}`,
+		);
+	}
 
 	// Update each player's score by multiplying it by the ratio of the new and old scores
 	teamPlayers.forEach(player => {
 		const playerOldScore = player.getScore();
 		const playerNewScore = playerOldScore * scoreRatio;
-		debug(
-			`${
-				player.name
-			} oldScore=${playerOldScore} newScore=${playerNewScore} delta=${playerNewScore -
-				playerOldScore}`,
-		);
+		if (debug.enabled) {
+			debug(
+				`${player.name} oldScore=${playerOldScore.toFixed(
+					2,
+				)} newScore=${playerNewScore.toFixed(2)} delta=${(
+					playerNewScore - playerOldScore
+				).toFixed(2)}`,
+			);
+		}
 		player.setScore(playerNewScore);
 		player.trackFixture(fixture);
 	});
