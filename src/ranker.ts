@@ -5,6 +5,7 @@ import { defaults } from 'lodash';
 import { DEBUG_NAME } from './debugName';
 
 const debug = require('debug')(DEBUG_NAME);
+const debugTable = require('debug')(DEBUG_NAME + ':table');
 
 export type Players = Record<string, Player>;
 export interface RankerOptions {
@@ -77,6 +78,8 @@ export function calculatePlayerRanks(
 		fixtures = filterForMinimumFixtureCount(fixtures, minimumFixtureCount);
 	}
 
+	fixtures = fixtures.sort((a, b) => a.date.getTime() - b.date.getTime());
+
 	for (const fixture of fixtures) {
 		const { blue, orange, date } = fixture;
 
@@ -99,7 +102,7 @@ export function calculatePlayerRanks(
 
 		if (debug.enabled) {
 			debug(
-				`Game summary: ${date.toISOString()} ${blue.team.join(' ')} ${
+				`\nGame summary: ${date.toISOString()} ${blue.team.join(' ')} ${
 					blue.goals
 				} - ${orange.goals} ${orange.team.join(' ')}`,
 			);
@@ -130,8 +133,8 @@ export function calculatePlayerRanks(
 
 		results.push({ kFactor, fixture, scoreRatio });
 
-		if (debug.enabled) {
-			debug(
+		if (debugTable.enabled) {
+			debugTable(
 				getSummary(Object.values(players).sort(sortByScore), {
 					includeIdle: true,
 				}),

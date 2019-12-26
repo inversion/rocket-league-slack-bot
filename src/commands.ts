@@ -344,10 +344,12 @@ ${this.matches(players, fixtures)}
 	private async getTable({
 		maxDate,
 		fixtureFilter,
+		isCurrentSeason,
 		rankerOptions,
 	}: {
 		maxDate?: Date;
 		fixtureFilter?: (fixture: Fixture) => boolean;
+		isCurrentSeason?: boolean;
 		rankerOptions?: Partial<RankerOptions>;
 	} = {}) {
 		let fixtures = await this.database.getFixtures(maxDate);
@@ -364,7 +366,17 @@ ${this.matches(players, fixtures)}
 			...calculatePlayerRanks(
 				fixtures,
 				keyByPlayerName(players),
-				rankerOptions,
+				Object.assign(
+					{
+						minimumFixtureCount: isCurrentSeason ? undefined : 10,
+						endDate: isCurrentSeason
+							? new Date()
+							: fixtures.sort(
+									(a, b) => b.date.getTime() - a.date.getTime(),
+							  )?.[0]?.date,
+					},
+					rankerOptions,
+				),
 			),
 		};
 	}
@@ -497,9 +509,7 @@ ${this.matches(players, fixtures)}
 			(
 				await this.getTable({
 					fixtureFilter,
-					rankerOptions: {
-						minimumFixtureCount: isCurrentSeason ? undefined : 10,
-					},
+					isCurrentSeason,
 				})
 			).table,
 			{ includeIdle: !isCurrentSeason },
