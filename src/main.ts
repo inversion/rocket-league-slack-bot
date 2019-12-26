@@ -16,14 +16,23 @@ if (require.main === module) {
 				console.log(await commandHandler.stats());
 				console.log(await commandHandler.table(''));
 				console.log(await commandHandler.table('1v1'));
-				console.log(await commandHandler.table('2v2'));
+				console.log(await commandHandler.table('2v2 s1'));
+				console.log(
+					JSON.stringify(
+						await commandHandler.odds({
+							text: '@jack @andrew 5 0 @mike @jed',
+						} as any),
+						null,
+						2,
+					),
+				);
 				console.log(await commandHandler.table('3v3'));
 				console.log(await commandHandler.table('all'));
 				console.log(
 					JSON.stringify(
 						await commandHandler.record({
 							text: '@jack @owen 1 5 @hugh @andrew',
-						}),
+						} as any),
 						null,
 						2,
 					),
