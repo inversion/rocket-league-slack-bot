@@ -1,5 +1,5 @@
 import { Database } from './database';
-import { parseFixturesFromString, Fixture } from './Fixture';
+import { parseFixturesFromString, Fixture, Side } from './Fixture';
 import {
 	calculatePlayerRanks,
 	getSummary,
@@ -8,6 +8,7 @@ import {
 	formatRank,
 	RankerOptions,
 	K_FACTOR,
+	expectedScore,
 } from './ranker';
 import request from 'request-promise-native';
 import { format, addDays } from 'date-fns';
@@ -31,6 +32,9 @@ function keyByPlayerName(players: Player[]): Players {
 interface SlackCommandBody {
 	text: string;
 	command: string;
+	channel_name: string;
+	response_url: string;
+	user_name: string;
 }
 
 export class CommandHandler {
@@ -49,6 +53,8 @@ export class CommandHandler {
 			return this.record(body);
 		} else if (command === `${commandPrefix}table`) {
 			return this.table(text);
+		} else if (command === `${commandPrefix}odds`) {
+			return this.odds(body);
 		} else if (command === `${commandPrefix}changes`) {
 			return this.changes(text);
 		} else if (command === `${commandPrefix}stats`) {
@@ -60,7 +66,7 @@ export class CommandHandler {
 		}
 	}
 
-	public async record(body: any) {
+	public async record(body: SlackCommandBody) {
 		const homeChannel = this.config.slackHomeChannel;
 		if (homeChannel && body.channel_name !== homeChannel) {
 			await request.post({
@@ -187,7 +193,7 @@ export class CommandHandler {
 		};
 	}
 
-	matches(players: Player[], fixtures: Fixture[]) {
+	matchingHistory(players: Player[], fixtures: Fixture[]) {
 		const activePlayers = players.filter(player => player.isActive());
 
 		type Matches = Record<
@@ -302,7 +308,7 @@ ${biggestVictories
 Biggest Upsets (excludes games for new players):
 ${biggestUpsets.map(({ fixture }) => formatFixtureWithDate(fixture)).join('\n')}
 		
-${this.matches(players, fixtures)}
+${this.matchingHistory(players, fixtures)}
 `;
 
 		return {
@@ -495,6 +501,103 @@ ${this.matches(players, fixtures)}
 			]
 				.filter(item => !!item)
 				.join(' '),
+		};
+	}
+
+	public async odds(body: SlackCommandBody) {
+		const inputFixtures = parseFixturesFromString(body.text);
+
+		if (inputFixtures.length !== 1) {
+			const text = `You must specify exactly one fixture to calculate odds for.`;
+			await request.post({
+				url: body.response_url,
+				json: true,
+				body: {
+					response_type: 'ephemeral',
+					replace_original: false,
+					text,
+				},
+			});
+
+			throw new Error(text);
+		}
+
+		const fixture = inputFixtures[0];
+
+		const { blue, orange } = fixture;
+
+		const { players, fixtures } = await this.getTable({
+			fixtureFilter: this.createFixtureFilter(blue.team.length),
+		});
+
+		if (
+			![...blue.team, ...orange.team].every(name =>
+				players.find(player => player.name === name),
+			)
+		) {
+			const text = `Cannot calculate odds unless all players involved are in the table already.`;
+			await request.post({
+				url: body.response_url,
+				json: true,
+				body: {
+					response_type: 'ephemeral',
+					replace_original: false,
+					text,
+				},
+			});
+
+			throw new Error(text);
+		}
+
+		const winningSide = blue.goals > orange.goals ? blue : orange;
+		const losingSide = blue.goals > orange.goals ? orange : blue;
+
+		const scoreForSide = (side: Side) =>
+			side.team
+				.map(name => players.find(player => player.name === name)?.getScore())
+				.reduce<number>((sum, val) => (val ? sum + val : sum), 0);
+
+		const E = expectedScore(
+			scoreForSide(winningSide),
+			scoreForSide(losingSide),
+		);
+
+		/**
+		 * TODO. Things to incorporate to make this more accurate:
+		 *
+		 * - When those specific sides have met before
+		 * - Recent performance of players involved
+		 * - Recent performance of that side
+		 * - The wagered goal difference (cliff for when it's impractical for there to be enough time to score e.g. 20 goals for one side)
+		 */
+
+		/**
+		 * TODO. Would be nice to make this not need a score (and predict what the score might be!)
+		 */
+
+		return {
+			response_type: 'in_channel',
+			blocks: [
+				{
+					type: 'section',
+					text: {
+						type: 'mrkdwn',
+						text: `Odds for ${fixture.toString()}`,
+					},
+				},
+				{
+					type: 'divider',
+				},
+				{
+					type: 'section',
+					text: {
+						type: 'mrkdwn',
+						text: `${winningSide.team.join(' ')} chance to win: *${Math.round(
+							E * 100,
+						)}%*`,
+					},
+				},
+			],
 		};
 	}
 

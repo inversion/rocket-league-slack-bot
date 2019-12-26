@@ -358,7 +358,7 @@ function determineKFactor(played: number) {
 	}
 }
 
-function expectedScore(scoreA: number, scoreB: number) {
+export function expectedScore(scoreA: number, scoreB: number) {
 	const x = scoreA - scoreB;
 
 	return 1 / (1 + Math.pow(Math.E, -x / SCALE));
