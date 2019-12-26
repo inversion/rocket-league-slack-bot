@@ -81,11 +81,13 @@ export class Player {
 		return differenceInDays(new Date(), this.getLastFixtureDate());
 	}
 
-	public isActive() {
+	public isActive(
+		{ includeIdle }: { includeIdle?: boolean } = { includeIdle: false },
+	) {
 		return (
 			!this.hidden &&
 			this.getPlayed() > 0 &&
-			this.idleDays() <= TABLE_DISPLAY_CUTOFF_DAYS
+			(includeIdle || this.idleDays() <= TABLE_DISPLAY_CUTOFF_DAYS)
 		);
 	}
 

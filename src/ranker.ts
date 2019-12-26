@@ -63,11 +63,11 @@ export function calculatePlayerRanks(
 		const kFactor = determineKFactor(minPlayed);
 
 		if (debug.enabled) {
-			debug(`Game summary:
-${date.toISOString()}
-${blue.team.join(' ')} ${blue.goals} - ${orange.goals} ${orange.team.join(' ')}
-
-		`);
+			debug(
+				`Game summary: ${date.toISOString()} ${blue.team.join(' ')} ${
+					blue.goals
+				} - ${orange.goals} ${orange.team.join(' ')}`,
+			);
 		}
 
 		const { scoreRatio } = updateTeamScores(
@@ -96,16 +96,24 @@ ${blue.team.join(' ')} ${blue.goals} - ${orange.goals} ${orange.team.join(' ')}
 		results.push({ kFactor, fixture, scoreRatio });
 
 		if (debug.enabled) {
-			debug(getSummary(Object.values(players)));
+			debug(
+				getSummary(Object.values(players).sort(sortByScore), {
+					includeIdle: true,
+				}),
+			);
 		}
 	}
 
 	return {
 		results,
 		table: Object.values(players)
-			.sort((a, b) => b.getScore() - a.getScore())
+			.sort(sortByScore)
 			.filter(player => player.isActive()),
 	};
+}
+
+function sortByScore(a: Player, b: Player) {
+	return b.getScore() - a.getScore();
 }
 
 export function formatRank(rank: number) {
@@ -122,7 +130,14 @@ export function formatRank(rank: number) {
 	return `${rank}${suffix}`;
 }
 
-export function getSummary(table: Player[]) {
+interface SummaryOptions {
+	includeIdle?: boolean;
+}
+
+export function getSummary(
+	table: Player[],
+	{ includeIdle }: SummaryOptions = { includeIdle: false },
+) {
 	const headings = [
 		'Rank',
 		'Name',
@@ -143,7 +158,7 @@ export function getSummary(table: Player[]) {
 	return [
 		headings.map(pad).join(''),
 		...table
-			.filter(player => player.isActive())
+			.filter(player => player.isActive({ includeIdle }))
 			.map((player, i) => {
 				const played = player.getPlayed();
 				const wins = player.getWins();
