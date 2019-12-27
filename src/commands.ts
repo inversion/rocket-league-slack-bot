@@ -69,14 +69,11 @@ export class CommandHandler {
 	public async record(body: SlackCommandBody) {
 		const homeChannel = this.config.slackHomeChannel;
 		if (homeChannel && body.channel_name !== homeChannel) {
-			await request.post({
-				url: body.response_url,
-				json: true,
-				body: {
-					response_type: 'ephemeral',
-					text: `Sorry, you can only record games in the #${homeChannel} channel.`,
-				},
-			});
+			await this.throwError(
+				body.response_url,
+				`Sorry, you can only record games in the #${homeChannel} channel.`,
+			);
+
 			return;
 		}
 		const fixtures = parseFixturesFromString(body.text);
@@ -504,22 +501,28 @@ ${this.matchingHistory(players, fixtures)}
 		};
 	}
 
+	private async throwError(response_url: string, text: string) {
+		await request.post({
+			url: response_url,
+			json: true,
+			body: {
+				response_type: 'ephemeral',
+				replace_original: false,
+				text,
+			},
+		});
+
+		throw new Error(text);
+	}
+
 	public async odds(body: SlackCommandBody) {
 		const inputFixtures = parseFixturesFromString(body.text);
 
 		if (inputFixtures.length !== 1) {
-			const text = `You must specify exactly one fixture to calculate odds for.`;
-			await request.post({
-				url: body.response_url,
-				json: true,
-				body: {
-					response_type: 'ephemeral',
-					replace_original: false,
-					text,
-				},
-			});
-
-			throw new Error(text);
+			await this.throwError(
+				body.response_url,
+				`You must specify exactly one fixture to calculate odds for.`,
+			);
 		}
 
 		const fixture = inputFixtures[0];
@@ -535,18 +538,10 @@ ${this.matchingHistory(players, fixtures)}
 				players.find(player => player.name === name),
 			)
 		) {
-			const text = `Cannot calculate odds unless all players involved are in the table already.`;
-			await request.post({
-				url: body.response_url,
-				json: true,
-				body: {
-					response_type: 'ephemeral',
-					replace_original: false,
-					text,
-				},
-			});
-
-			throw new Error(text);
+			await this.throwError(
+				body.response_url,
+				`Cannot calculate odds unless all players involved are in the table already.`,
+			);
 		}
 
 		const winningSide = blue.goals > orange.goals ? blue : orange;
@@ -640,18 +635,11 @@ ${this.matchingHistory(players, fixtures)}
 				const fixtureModel = await this.database.getFixtureById(fixtureId);
 
 				if (!fixtureModel) {
-					const text = `Could not delete fixture with ID ${fixtureId} - has it already been deleted?`;
-					await request.post({
-						url: payload.response_url,
-						json: true,
-						body: {
-							response_type: 'ephemeral',
-							replace_original: false,
-							text,
-						},
-					});
-
-					throw new Error(text);
+					await this.throwError(
+						payload.response_url,
+						`Could not delete fixture with ID ${fixtureId} - has it already been deleted?`,
+					);
+					return;
 				}
 
 				await this.database.deleteFixture(fixtureId);
