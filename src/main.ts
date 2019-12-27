@@ -30,14 +30,21 @@ if (require.main === module) {
 				);
 				console.log(await commandHandler.table('3v3'));
 				console.log(await commandHandler.table('all'));
+
+				// console.log(
+				// 	JSON.stringify(
+				// 		await commandHandler.record({
+				// 			text: '@jack @owen 1 5 @hugh @andrew',
+				// 		} as any),
+				// 		null,
+				// 		2,
+				// 	),
+				// );
+
 				console.log(
-					JSON.stringify(
-						await commandHandler.record({
-							text: '@jack @owen 1 5 @hugh @andrew',
-						} as any),
-						null,
-						2,
-					),
+					await commandHandler.matches({
+						text: '@jack @andrew @mike @jed @ross @hugh',
+					} as any),
 				);
 
 				await database.teardown();

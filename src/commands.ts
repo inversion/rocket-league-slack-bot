@@ -17,6 +17,7 @@ import { Player } from './Player';
 import { flatten, uniq, compact } from 'lodash';
 import { PlayerModel } from './models/PlayerModel';
 import { formatChange } from './formatChange';
+import { combinations } from './maths';
 
 const formatFixtureWithDate = (fixture: Fixture) =>
 	`${format(fixture.date, 'do MMM yyyy')} ${fixture.toString()}`;
@@ -55,6 +56,8 @@ export class CommandHandler {
 			return this.table(text);
 		} else if (command === `${commandPrefix}odds`) {
 			return this.odds(body);
+		} else if (command === `${commandPrefix}matches`) {
+			return this.matches(body);
 		} else if (command === `${commandPrefix}changes`) {
 			return this.changes(text);
 		} else if (command === `${commandPrefix}stats`) {
@@ -64,6 +67,123 @@ export class CommandHandler {
 		} else {
 			throw new Error(`Unknown command ${command}`);
 		}
+	}
+
+	public async matches(body: SlackCommandBody) {
+		const { text, response_url } = body;
+
+		const {
+			filterDescription,
+			isCurrentSeason,
+			playersPerSide,
+			fixtureFilter,
+		} = await this.createFilters(text);
+
+		if (playersPerSide === undefined) {
+			this.throwError(
+				response_url,
+				'Cannot calculate matches if playersPerSide is undefined (did you specify "all"?)',
+			);
+			return;
+		}
+
+		if (!isCurrentSeason) {
+			this.throwError(
+				response_url,
+				'Cannot calculate matches if this is not the current season',
+			);
+			return;
+		}
+
+		const { players } = await this.getTable({
+			fixtureFilter,
+		});
+
+		const names = text.trim().split(/\s+/);
+
+		const includedPlayers = players.filter(player =>
+			names.includes(player.name),
+		);
+
+		const sumScores = (players: Player[]) =>
+			players.reduce((sum, player) => sum + player.getScore(), 0);
+
+		const teams = combinations(includedPlayers, playersPerSide);
+
+		const possibilities = combinations(teams, 2)
+			.filter(([blue, orange]) => {
+				const getName = (player: Player) => player.name;
+				const blueNames = blue.map(getName);
+				const orangeNames = orange.map(getName);
+
+				return (
+					blueNames.filter(name => orangeNames.includes(name)).length === 0
+				);
+			})
+			.map(sides => ({
+				sides,
+				scoreDelta: Math.abs(sumScores(sides[0]) - sumScores(sides[1])),
+			}))
+			.sort((a, b) => a.scoreDelta - b.scoreDelta);
+
+		const describePossibility = ({
+			sides,
+			scoreDelta,
+		}: typeof possibilities[0]) =>
+			`${sides[0].map(player => player.name).join(' ')} vs. ${sides[1]
+				.map(player => player.name)
+				.join(' ')} (total score difference ${Math.round(scoreDelta)})`;
+
+		const countToPick = 5;
+
+		const fairest = possibilities.slice(0, countToPick);
+		const mostUnfair = possibilities.slice(-countToPick);
+
+		return {
+			response_type: 'in_channel',
+			blocks: [
+				{
+					type: 'section',
+					text: {
+						type: 'mrkdwn',
+						text: `Possible matches for ${names}`,
+					},
+				},
+				{
+					type: 'divider',
+				},
+				{
+					type: 'section',
+					text: {
+						type: 'mrkdwn',
+						text: `*Fairest ${countToPick}*\n${fairest
+							.map(describePossibility)
+							.join('\n')}`,
+					},
+				},
+				{
+					type: 'divider',
+				},
+				{
+					type: 'section',
+					text: {
+						type: 'mrkdwn',
+						text: `*Most Unfair ${countToPick}*\n${mostUnfair
+							.map(describePossibility)
+							.join('\n')}`,
+					},
+				},
+				{
+					type: 'context',
+					elements: [
+						{
+							type: 'mrkdwn',
+							text: filterDescription,
+						},
+					],
+				},
+			],
+		};
 	}
 
 	public async record(body: SlackCommandBody) {
