@@ -1,3 +1,5 @@
+require('source-map-support').install();
+
 import { createServer } from './server';
 import { getConfigFromEnv } from './config';
 import { Database } from './database';

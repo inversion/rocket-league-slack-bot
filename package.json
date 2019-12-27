@@ -54,6 +54,7 @@
 		"objection": "^1.6.11",
 		"request": "^2.88.0",
 		"request-promise-native": "^1.0.7",
+		"source-map-support": "^0.5.16",
 		"sqlite3": "^4.1.0"
 	}
 }
