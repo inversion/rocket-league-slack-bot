@@ -579,7 +579,7 @@ ${this.matchingHistory(players, fixtures)}
 
 		let playersPerSide: number | undefined;
 
-		if (!parameters.includes('all')) {
+		if (/\ball\b/.test(parameters)) {
 			if (playerCountMatch) {
 				playersPerSide = parseInt(playerCountMatch[1], 10);
 			} else {
