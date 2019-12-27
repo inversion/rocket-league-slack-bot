@@ -169,6 +169,7 @@ export class CommandHandler {
 					text: {
 						type: 'mrkdwn',
 						text: `*Most Unfair ${countToPick}*\n${mostUnfair
+							.reverse()
 							.map(describePossibility)
 							.join('\n')}`,
 					},
