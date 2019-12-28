@@ -37,6 +37,7 @@ export function parseParameters(parameters: string) {
 	return {
 		seasonId: seasonMatch ? parseInt(seasonMatch[1], 10) : undefined,
 		playersPerSide,
+		includeIdle: /\bidle\b/.test(parameters),
 	};
 }
 
@@ -596,7 +597,9 @@ ${this.matchingHistory(players, fixtures)}
 	}
 
 	private async createFilters(parameters: string) {
-		const { playersPerSide, seasonId } = parseParameters(parameters);
+		const { playersPerSide, seasonId, includeIdle } = parseParameters(
+			parameters,
+		);
 
 		const currentSeason = await this.database.getCurrentSeason();
 		const season =
@@ -614,6 +617,7 @@ ${this.matchingHistory(players, fixtures)}
 		const seasonDescription = season?.description();
 		const isCurrentSeason = currentSeason?.id === season?.id;
 		return {
+			includeIdle,
 			fixtureFilter,
 			playersPerSide,
 			seasonDescription,
@@ -731,6 +735,7 @@ ${this.matchingHistory(players, fixtures)}
 			filterDescription,
 			fixtureFilter,
 			isCurrentSeason,
+			includeIdle,
 		} = await this.createFilters(parameters);
 
 		const summary = getSummary(
@@ -740,7 +745,7 @@ ${this.matchingHistory(players, fixtures)}
 					isCurrentSeason,
 				})
 			).table,
-			{ includeIdle: !isCurrentSeason },
+			{ includeIdle: includeIdle || !isCurrentSeason },
 		);
 
 		return {
