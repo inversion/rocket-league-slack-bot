@@ -19,6 +19,27 @@ import { PlayerModel } from './models/PlayerModel';
 import { formatChange } from './formatChange';
 import { combinations } from './maths';
 
+export function parseParameters(parameters: string) {
+	const playerCountMatch = parameters.match(/(\d+)v\1/);
+
+	let playersPerSide: number | undefined;
+
+	if (!/(?:[\s]|^)all\b/.test(parameters)) {
+		if (playerCountMatch) {
+			playersPerSide = parseInt(playerCountMatch[1], 10);
+		} else {
+			playersPerSide = 2;
+		}
+	}
+
+	const seasonMatch = parameters.match(/s(\d+)/);
+
+	return {
+		seasonId: seasonMatch ? parseInt(seasonMatch[1], 10) : undefined,
+		playersPerSide,
+	};
+}
+
 const formatFixtureWithDate = (fixture: Fixture) =>
 	`${format(fixture.date, 'do MMM yyyy')} ${fixture.toString()}`;
 
@@ -575,25 +596,13 @@ ${this.matchingHistory(players, fixtures)}
 	}
 
 	private async createFilters(parameters: string) {
-		const playerCountMatch = parameters.match(/(\d+)v\1/);
-
-		let playersPerSide: number | undefined;
-
-		if (/\ball\b/.test(parameters)) {
-			if (playerCountMatch) {
-				playersPerSide = parseInt(playerCountMatch[1], 10);
-			} else {
-				playersPerSide = 2;
-			}
-		}
-
-		const seasonMatch = parameters.match(/s(\d+)/);
+		const { playersPerSide, seasonId } = parseParameters(parameters);
 
 		const currentSeason = await this.database.getCurrentSeason();
 		const season =
-			(seasonMatch &&
+			(seasonId &&
 				(await this.database.getSeasons()).find(
-					season => season.id === parseInt(seasonMatch[1], 10),
+					season => season.id === seasonId,
 				)) ||
 			currentSeason;
 
