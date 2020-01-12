@@ -523,7 +523,6 @@ ${this.matchingHistory(players, fixtures)}
 				keyByPlayerName(players),
 				Object.assign(
 					{
-						minimumFixtureCount: isCurrentSeason ? undefined : 10,
 						endDate: isCurrentSeason
 							? new Date()
 							: fixtures.sort(
