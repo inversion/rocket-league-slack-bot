@@ -256,7 +256,8 @@ export class CommandHandler {
 			...(await Promise.all(
 				playersPerSideList.map(async playersPerSide => ({
 					[playersPerSide]: await this.getTable({
-						fixtureFilter: this.createFixtureFilter(playersPerSide),
+						fixtureFilter: (await this.createFilters(`${playersPerSide}v${playersPerSide}`)).fixtureFilter,
+						excludeIdleFromTable: true,
 					}),
 				})),
 			)),
@@ -268,10 +269,10 @@ export class CommandHandler {
 
 		const tableDiffs = await Promise.all(
 			playersPerSideList.map(async playersPerSide => {
-				const fixtureFilter = this.createFixtureFilter(playersPerSide);
+				const fixtureFilter = (await this.createFilters(`${playersPerSide}v${playersPerSide}`)).fixtureFilter
 				const oldTable = oldTables[playersPerSide];
 
-				const newTable = await this.getTable({ fixtureFilter });
+				const newTable = await this.getTable({ fixtureFilter, excludeIdleFromTable: true });
 
 				const diff = await this.getTableDiff(
 					oldTable.table,
@@ -501,11 +502,13 @@ ${this.matchingHistory(players, fixtures)}
 		fixtureFilter,
 		isCurrentSeason,
 		rankerOptions,
+		excludeIdleFromTable,
 	}: {
 		maxDate?: Date;
 		fixtureFilter?: (fixture: Fixture) => boolean;
 		isCurrentSeason?: boolean;
 		rankerOptions?: Partial<RankerOptions>;
+		excludeIdleFromTable?: boolean;
 	} = {}) {
 		let fixtures = await this.database.getFixtures(maxDate);
 
@@ -515,23 +518,26 @@ ${this.matchingHistory(players, fixtures)}
 
 		const players = await this.database.getPlayers();
 
+		const {results, table} = calculatePlayerRanks(
+			fixtures,
+			keyByPlayerName(players),
+			Object.assign(
+				{
+					endDate: isCurrentSeason
+						? new Date()
+						: fixtures.sort(
+								(a, b) => b.date.getTime() - a.date.getTime(),
+						  )?.[0]?.date,
+				},
+				rankerOptions,
+			),
+		);
+
 		return {
 			players,
 			fixtures,
-			...calculatePlayerRanks(
-				fixtures,
-				keyByPlayerName(players),
-				Object.assign(
-					{
-						endDate: isCurrentSeason
-							? new Date()
-							: fixtures.sort(
-									(a, b) => b.date.getTime() - a.date.getTime(),
-							  )?.[0]?.date,
-					},
-					rankerOptions,
-				),
-			),
+			results,
+			table: excludeIdleFromTable ? table.filter(player => player.isActive()) : table,
 		};
 	}
 

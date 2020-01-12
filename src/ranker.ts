@@ -288,10 +288,7 @@ function updateTeamScores(
 		: 1;
 
 	const decayFactor = rankingOptions.useDecay
-		? clamp(
-				0,
-				1,
-		  )(
+		? clamp(0, 1)(
 				((rankingOptions.currentDate.getTime() - date.getTime()) / DAY_MS) *
 					DAILY_DECAY,
 		  )
