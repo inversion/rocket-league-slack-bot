@@ -476,13 +476,22 @@ ${this.matchingHistory(players, fixtures)}
 					type: 'section',
 					text: {
 						type: 'mrkdwn',
-						text: `Changes in the ${filterDescription} in the last 24 hours`,
+						text: `Changes in the last 24 hours`,
 					},
 				},
 				{
 					type: 'divider',
 				},
 				...(await this.getTableDiff(oldTable.table, newTable.table)),
+				{
+					type: 'context',
+					elements: [
+						{
+							type: 'mrkdwn',
+							text: filterDescription,
+						},
+					],
+				},
 			],
 		};
 	}
@@ -566,6 +575,11 @@ ${this.matchingHistory(players, fixtures)}
 					newRecord.getScore() -
 						(oldRecord ? oldRecord.getScore() : INITIAL_SCORE),
 				);
+
+				if( scoreChange === 0 ) {
+
+					return;
+				}
 
 				const rankChange = oldRank ? oldRank - newRank : 0;
 
