@@ -256,7 +256,9 @@ export class CommandHandler {
 			...(await Promise.all(
 				playersPerSideList.map(async playersPerSide => ({
 					[playersPerSide]: await this.getTable({
-						fixtureFilter: (await this.createFilters(`${playersPerSide}v${playersPerSide}`)).fixtureFilter,
+						fixtureFilter: (
+							await this.createFilters(`${playersPerSide}v${playersPerSide}`)
+						).fixtureFilter,
 						excludeIdleFromTable: true,
 					}),
 				})),
@@ -269,10 +271,15 @@ export class CommandHandler {
 
 		const tableDiffs = await Promise.all(
 			playersPerSideList.map(async playersPerSide => {
-				const fixtureFilter = (await this.createFilters(`${playersPerSide}v${playersPerSide}`)).fixtureFilter
+				const fixtureFilter = (
+					await this.createFilters(`${playersPerSide}v${playersPerSide}`)
+				).fixtureFilter;
 				const oldTable = oldTables[playersPerSide];
 
-				const newTable = await this.getTable({ fixtureFilter, excludeIdleFromTable: true });
+				const newTable = await this.getTable({
+					fixtureFilter,
+					excludeIdleFromTable: true,
+				});
 
 				const diff = await this.getTableDiff(
 					oldTable.table,
@@ -518,16 +525,17 @@ ${this.matchingHistory(players, fixtures)}
 
 		const players = await this.database.getPlayers();
 
-		const {results, table} = calculatePlayerRanks(
+		const endDate = isCurrentSeason
+			? new Date()
+			: fixtures.sort((a, b) => b.date.getTime() - a.date.getTime())?.[0]?.date;
+
+		const { results, table } = calculatePlayerRanks(
 			fixtures,
 			keyByPlayerName(players),
 			Object.assign(
 				{
-					endDate: isCurrentSeason
-						? new Date()
-						: fixtures.sort(
-								(a, b) => b.date.getTime() - a.date.getTime(),
-						  )?.[0]?.date,
+					endDate,
+					currentDate: isCurrentSeason ? new Date() : endDate,
 				},
 				rankerOptions,
 			),
@@ -537,7 +545,9 @@ ${this.matchingHistory(players, fixtures)}
 			players,
 			fixtures,
 			results,
-			table: excludeIdleFromTable ? table.filter(player => player.isActive()) : table,
+			table: excludeIdleFromTable
+				? table.filter(player => player.isActive())
+				: table,
 		};
 	}
 
@@ -581,8 +591,7 @@ ${this.matchingHistory(players, fixtures)}
 						(oldRecord ? oldRecord.getScore() : INITIAL_SCORE),
 				);
 
-				if( scoreChange === 0 ) {
-
+				if (scoreChange === 0) {
 					return;
 				}
 
@@ -621,20 +630,26 @@ ${this.matchingHistory(players, fixtures)}
 		);
 
 		const currentSeason = await this.database.getCurrentSeason();
+
+		const allSeasons = await this.database.getSeasons();
+
 		const season =
-			(seasonId &&
-				(await this.database.getSeasons()).find(
-					season => season.id === seasonId,
-				)) ||
+			(seasonId && allSeasons.find(season => season.id === seasonId)) ||
 			currentSeason;
+		const isCurrentSeason = currentSeason?.id === season?.id;
+
+		const maxDate =
+			isCurrentSeason || !season
+				? undefined
+				: allSeasons.find(s => s.id === season.id + 1)?.start_date;
 
 		const fixtureFilter =
 			playersPerSide !== undefined
-				? this.createFixtureFilter(playersPerSide, season?.start_date)
+				? this.createFixtureFilter(playersPerSide, season?.start_date, maxDate)
 				: undefined;
 
 		const seasonDescription = season?.description();
-		const isCurrentSeason = currentSeason?.id === season?.id;
+
 		return {
 			includeIdle,
 			fixtureFilter,
@@ -773,9 +788,14 @@ ${this.matchingHistory(players, fixtures)}
 		};
 	}
 
-	private createFixtureFilter(playersPerSide: number, minDate?: Date) {
+	private createFixtureFilter(
+		playersPerSide: number,
+		minDate?: Date,
+		maxDate?: Date,
+	) {
 		return (fixture: Fixture) =>
 			(minDate ? fixture.date >= minDate : true) &&
+			(maxDate ? fixture.date < maxDate : true) &&
 			fixture.blue.team.length === playersPerSide &&
 			fixture.orange.team.length === playersPerSide;
 	}
