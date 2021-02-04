@@ -50,7 +50,7 @@
 		"knex": "^0.19.5",
 		"koa": "^2.8.2",
 		"koa-bodyparser": "^4.2.1",
-		"lodash": "^4.17.15",
+		"lodash": "^4.17.19",
 		"objection": "^1.6.11",
 		"request": "^2.88.0",
 		"request-promise-native": "^1.0.7",
